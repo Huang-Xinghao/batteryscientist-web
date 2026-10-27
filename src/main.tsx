@@ -10,6 +10,7 @@ import 'antd/dist/reset.css';
 import 'katex/dist/katex.min.css';
 import './app/styles.css';
 import './features/workbench/workbench.css';
+import './app/monochrome.css';
 const router = createBrowserRouter([{ path: '*', element: <App /> }]);
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,10 +25,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         locale={zhCN}
         theme={{
           token: {
-            colorPrimary: '#27745b',
+            colorPrimary: '#3b3b42',
             borderRadius: 8,
-            colorText: '#26362f',
-            colorBgLayout: '#f5f6f3',
+            colorText: '#27272a',
+            colorBgLayout: '#fafafa',
+            colorBorder: '#e4e4e7',
+            colorTextSecondary: '#71717a',
+            colorLink: '#27272a',
             fontFamily:
               'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
           },

@@ -3,6 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Form, Input, Modal, Segmented, Skeleton, Tooltip } from 'antd';
 import {
   ArrowRightOutlined,
+  AppstoreOutlined,
+  RadarChartOutlined,
+  ScanOutlined,
+  CheckCircleOutlined,
   ClockCircleOutlined,
   FolderAddOutlined,
   FolderOpenOutlined,
@@ -53,6 +57,12 @@ export function Projects() {
       ),
     [all, filter, search],
   );
+  const statIcons = [
+    <AppstoreOutlined />,
+    <RadarChartOutlined />,
+    <ScanOutlined />,
+    <CheckCircleOutlined />,
+  ];
   const showCreate = (isImport: boolean) => {
     setImporting(isImport);
     form.resetFields();
@@ -95,7 +105,9 @@ export function Projects() {
         ].map(([label, value, hint], i) => (
           <div className="overview-item" key={label}>
             <div>
-              <span className={`stat-dot stat-${i}`} />
+              <span className={`stat-icon stat-${i}`} aria-hidden="true">
+                {statIcons[i]}
+              </span>
               {label}
             </div>
             <strong>
@@ -255,7 +267,7 @@ export function Projects() {
               label="已有项目绝对路径"
               rules={[{ required: true, message: '请输入项目路径' }]}
             >
-              <Input placeholder="/data/xinghaohuang/paper-agent-projects/demo-project23" />
+              <Input placeholder="/data/xinghao/paper-agent-projects/demo-project23" />
             </Form.Item>
           )}
         </Form>

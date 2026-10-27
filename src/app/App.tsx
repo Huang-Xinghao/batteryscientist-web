@@ -1,17 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Result, Spin, Tooltip } from 'antd';
+import { Alert, Button, Result, Spin } from 'antd';
 import {
   ApartmentOutlined,
   ArrowUpOutlined,
   BookOutlined,
-  ExperimentOutlined,
-  FileTextOutlined,
+  DatabaseOutlined,
+  DeploymentUnitOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { Projects } from '../features/projects/Projects';
 import { Workbench } from '../features/workbench/Workbench';
+import { Library } from '../features/library/Library';
 export function App() {
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000 });
   const location = useLocation();
@@ -20,7 +21,7 @@ export function App() {
       <aside className="sidebar">
         <Link to="/" className="brand">
           <span className="brand-mark">
-            <FileTextOutlined />
+            <DeploymentUnitOutlined />
           </span>
           <div>
             Paper Agent<small>RESEARCH WORKSPACE</small>
@@ -34,16 +35,33 @@ export function App() {
           <span className="version">v0.1</span>
         </div>
         <div className="nav-caption">工作空间</div>
-        <Link className={`nav-item ${location.pathname !== '/settings' ? 'selected' : ''}`} to="/">
+        <Link
+          className={`nav-item ${location.pathname === '/' || location.pathname.startsWith('/projects') ? 'selected' : ''}`}
+          to="/"
+          aria-label="研究项目"
+          title="研究项目"
+        >
           <ApartmentOutlined />
           研究项目<span className="nav-arrow">↗</span>
         </Link>
-        <Tooltip title="实验和论文位于各项目工作台内" placement="right">
-          <div className="nav-hint">
-            <ExperimentOutlined />
-            实验与产物<small>项目内查看</small>
-          </div>
-        </Tooltip>
+        <Link
+          className={`nav-item ${location.pathname === '/libraries/paradigms' ? 'selected' : ''}`}
+          to="/libraries/paradigms"
+          aria-label="电池范式库"
+          title="电池范式库"
+        >
+          <BookOutlined />
+          电池范式库
+        </Link>
+        <Link
+          className={`nav-item ${location.pathname === '/libraries/battery' ? 'selected' : ''}`}
+          to="/libraries/battery"
+          aria-label="电池资源库"
+          title="电池资源库"
+        >
+          <DatabaseOutlined />
+          电池资源库
+        </Link>
         <div className="sidebar-note">
           <BookOutlined />
           <p>让研究，循证向前。</p>
@@ -69,16 +87,6 @@ export function App() {
       <main
         className={`main-shell ${location.pathname.startsWith('/projects/') ? 'workbench-shell' : ''}`}
       >
-        <header className="topbar">
-          <span>
-            WORKSPACE <span className="topbar-separator">/</span>{' '}
-            {location.pathname === '/settings' ? '设置' : '研究项目'}
-          </span>
-          <div>
-            <span className="local-chip">LOCAL</span>
-            <span className="user-avatar">研</span>
-          </div>
-        </header>
         {health.isError && (
           <Alert
             className="connection-alert"
@@ -92,6 +100,8 @@ export function App() {
         <Routes>
           <Route path="/" element={<Projects />} />
           <Route path="/projects/:id" element={<Workbench nodes={health.data?.nodes || []} />} />
+          <Route path="/libraries/paradigms" element={<Library kind="paradigms" />} />
+          <Route path="/libraries/battery" element={<Library kind="battery" />} />
           <Route
             path="/settings"
             element={

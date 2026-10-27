@@ -1,7 +1,14 @@
-import { Component, lazy, Suspense, type ReactNode } from 'react';
-import { Alert, Spin } from 'antd';
-const Editor = lazy(() => import('./Editor'));
-type EditorProps = { value: string; path: string; onChange: (value: string) => void };
+import { Component, type ReactNode } from 'react';
+import { Alert } from 'antd';
+import Editor from './Editor';
+export type EditorProps = {
+  value: string;
+  path: string;
+  onChange: (value: string) => void;
+  onSave?: () => void;
+  dirty?: boolean;
+  saving?: boolean;
+};
 class EditorBoundary extends Component<EditorProps & { children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -20,6 +27,12 @@ class EditorBoundary extends Component<EditorProps & { children: ReactNode }, { 
           value={this.props.value}
           onChange={(event) => this.props.onChange(event.target.value)}
           spellCheck={false}
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+              event.preventDefault();
+              this.props.onSave?.();
+            }
+          }}
         />
       </div>
     );
@@ -28,9 +41,7 @@ class EditorBoundary extends Component<EditorProps & { children: ReactNode }, { 
 export default function SafeEditor(props: EditorProps) {
   return (
     <EditorBoundary {...props}>
-      <Suspense fallback={<Spin className="editor-loading" />}>
-        <Editor {...props} />
-      </Suspense>
+      <Editor {...props} />
     </EditorBoundary>
   );
 }

@@ -1,11 +1,16 @@
 import { expect, test } from '@playwright/test';
-async function openFixture(page: import('@playwright/test').Page) {
+async function openFixture(page: import('@playwright/test').Page, requireEditor = true) {
   await page.goto('/');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })
     .click();
-  await expect(page.getByRole('heading', { name: '电池寿命研究' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'battery-study', exact: true })).toBeVisible();
+  if ((page.viewportSize()?.width || 1512) <= 1000) {
+    await expect(page.getByRole('navigation', { name: '工作台视图' })).toBeVisible();
+    await page.getByRole('button', { name: '产物工作区', exact: true }).click();
+  }
+  if (requireEditor) await expect(page.locator('.monaco-editor').first()).toBeVisible();
 }
 
 test('lists real projects, searches, and opens a research report', async ({ page }) => {
@@ -17,10 +22,9 @@ test('lists real projects, searches, and opens a research report', async ({ page
   await expect(page.getByText('没有匹配的项目')).toBeVisible();
   await page.getByPlaceholder('搜索项目或研究目标').fill('电池');
   await page.locator('a.project-card').click();
-  await expect(page.getByRole('heading', { name: '电池寿命研究' })).toBeVisible();
-  await page.getByRole('button', { name: '查看问题并回答' }).click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   await expect(page.getByText('优先研究哪一个泛化问题？')).toBeVisible();
-  await page.getByRole('button', { name: '关闭', exact: true }).click();
   await page.screenshot({ path: 'artifacts/workbench-tested.png', fullPage: true });
   expect(errors).toEqual([]);
 });
@@ -38,7 +42,6 @@ test('creates a project with a separate research directory', async ({ page }) =>
 
 test('edits and saves a report through the API', async ({ page }) => {
   await openFixture(page);
-  await page.getByText('编辑', { exact: true }).click();
   const editor = page.locator('.monaco-editor').first();
   await expect(editor).toBeVisible();
   await editor.click();
@@ -50,14 +53,14 @@ test('edits and saves a report through the API', async ({ page }) => {
   await page.getByRole('button', { name: /取\s*消/ }).click();
   await expect(editor).toBeVisible();
   await page.getByRole('button', { name: /保\s*存/ }).click();
-  await expect(page.getByText('浏览器保存验证。', { exact: true })).toBeVisible();
+  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
   await page.reload();
-  await expect(page.getByText('浏览器保存验证。', { exact: true })).toBeVisible();
+  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
 });
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
   await openFixture(page);
-  await page.getByRole('button', { name: '查看问题并回答' }).click();
+  await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   let body: Record<string, unknown> | undefined;
   await page.route('**/api/projects/*/runs', async (route) => {
     body = route.request().postDataJSON();
@@ -81,9 +84,12 @@ test('mobile workbench fits the viewport and file navigation works', async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await openFixture(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-  await page.getByRole('tab', { name: /项目文件/ }).click();
-  await page.getByRole('button', { name: 'literature/RESEARCH_REPORT.md' }).click();
-  await expect(page.getByRole('heading', { name: '电池寿命研究' })).toBeVisible();
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('RESEARCH_REPORT.md');
+  await page
+    .locator('.directory-file')
+    .filter({ hasText: 'RESEARCH_REPORT.md' })
+    .click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-mobile-tested.png', fullPage: true });
 });
 
@@ -101,7 +107,7 @@ test('connection errors provide a retry action', async ({ page }) => {
   await expect(page.getByRole('button', { name: /重\s*试/ })).toBeVisible();
 });
 
-test('login gates project data and logout returns to login', async ({ page }) => {
+test('login gates project data without a floating logout button', async ({ page }) => {
   let signedIn = false;
   await page.route('**/api/auth/session', (route) =>
     route.fulfill({ json: { enabled: true, authenticated: signedIn } }),
@@ -114,49 +120,107 @@ test('login gates project data and logout returns to login', async ({ page }) =>
       json: signedIn ? { authenticated: true } : { detail: '用户名或密码错误' },
     });
   });
-  await page.route('**/api/auth/logout', async (route) => {
-    signedIn = false;
-    await route.fulfill({ json: { authenticated: false } });
-  });
   await page.goto('/');
   await expect(page.getByText('登录你的研究空间')).toBeVisible();
   await expect(page.locator('a.project-card')).toHaveCount(0);
   await page.getByLabel('用户名').fill('admin');
   await page.getByLabel('密码', { exact: true }).fill('wrong');
-  await page.getByRole('button', { name: /^登\s*录$/ }).click();
+  await page.getByRole('button', { name: /登\s*录/ }).click();
   await expect(page.getByText('用户名或密码错误')).toBeVisible();
   await page.getByLabel('密码', { exact: true }).fill('correct-password');
-  await page.getByRole('button', { name: /^登\s*录$/ }).click();
+  await page.getByRole('button', { name: /登\s*录/ }).click();
   await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
-  await page.getByRole('button', { name: '退出登录' }).click();
-  await expect(page.getByText('登录你的研究空间')).toBeVisible();
-  await expect(page.locator('a.project-card')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '退出登录' })).toHaveCount(0);
 });
 
 test('expert questions have a visible entry and collaboration mode can be chosen', async ({
   page,
 }) => {
   await openFixture(page);
-  await page.getByRole('button', { name: '查看问题并回答' }).click();
-  await expect(
-    page.getByPlaceholder('输入你的回答或修改意见；留空表示接受当前产物并继续。'),
-  ).toBeInViewport();
+  await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: /优先研究哪一个泛化问题/ })).toBeVisible();
   await page.goto('/');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('模式选择测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
   await page.getByRole('button', { name: '协作方式设置' }).click();
-  await expect(page.getByLabel('协作方式')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '协作方式', exact: true })).toBeVisible();
   await expect(page.getByText('专家模式 · 每个阶段审阅后继续（推荐）')).toBeVisible();
+});
+
+test('review questions have independent drafts and submit their matching answers together', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    if (project.state?.expert_checkpoint)
+      project.state.expert_checkpoint.questions = [
+        '优先研究哪一个泛化问题？',
+        '希望使用什么数据集？',
+      ];
+    await route.fulfill({ response, json: project });
+  });
+  await openFixture(page);
+  await page.getByRole('button', { name: '研究对话', exact: true }).click();
+  const first = page.getByRole('textbox', { name: /优先研究哪一个泛化问题/ });
+  const second = page.getByRole('textbox', { name: /希望使用什么数据集/ });
+  await first.fill('优先跨电芯泛化');
+  await second.fill('NASA 和 CALCE');
+  await expect(page.getByText('已回答 2 / 2')).toBeVisible();
+  await page.getByLabel('专家反馈').fill('先完成文献对照');
+  await page.getByRole('button', { name: '提交意见并继续' }).click();
+  await page.getByRole('button', { name: /取\s*消/ }).click();
+  await expect(first).toHaveValue('优先跨电芯泛化');
+  await expect(second).toHaveValue('NASA 和 CALCE');
+  let fail = true;
+  let body: Record<string, unknown> | undefined;
+  await page.route('**/api/projects/*/runs', async (route) => {
+    body = route.request().postDataJSON();
+    await route.fulfill({
+      status: fail ? 409 : 202,
+      json: fail ? { detail: '检查点已更新，请刷新' } : { id: 'question-review' },
+    });
+  });
+  await page.getByRole('button', { name: '提交意见并继续' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
+  await expect(page.getByText('检查点已更新，请刷新')).toBeVisible();
+  await expect(first).toHaveValue('优先跨电芯泛化');
+  await expect(second).toHaveValue('NASA 和 CALCE');
+  fail = false;
+  await page.getByRole('button', { name: /取\s*消/ }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await first.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'artifacts/review-question-answers-mobile.png' });
+  await page.getByRole('button', { name: '提交意见并继续' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
+  await expect(first).toHaveValue('');
+  await expect(second).toHaveValue('');
+  expect(body?.answer).toBe(
+    '问题 1：优先研究哪一个泛化问题？\n回答：优先跨电芯泛化\n\n问题 2：希望使用什么数据集？\n回答：NASA 和 CALCE\n\n补充意见：先完成文献对照',
+  );
+  expect(typeof body?.checkpoint_token).toBe('string');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.unrouteAll({ behavior: 'wait' });
 });
 
 test('LaTeX source and PDF appear together and images open in a gallery', async ({ page }) => {
   await openFixture(page);
-  await page.getByRole('tab', { name: /项目文件/ }).click();
-  await page.getByRole('button', { name: /paper\/main\.tex/ }).click();
-  await expect(page.getByText('LaTeX 论文工作区', { exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('paper/main.tex');
+  await page
+    .locator('.directory-file')
+    .filter({ hasText: 'main.tex' })
+    .click();
+  await expect(page.locator('.workspace-panel-header')).toBeHidden();
+  await expect(page.getByRole('tab', { name: '文件', exact: true })).toBeHidden();
+  await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
+  await expect(page.getByText('LaTeX 论文工作区', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('编辑', { exact: true })).toHaveCount(0);
+  const surface = await page.locator('.latex-source .monaco-editor').boundingBox();
+  expect(surface!.height).toBeGreaterThan(500);
+  expect(surface!.width).toBeGreaterThan(350);
   await expect(page.locator('iframe[title="论文 PDF 对照预览"]')).toBeVisible();
-  await page.getByText('编辑', { exact: true }).click();
   const editor = page.locator('.monaco-editor').first();
   await expect(editor).toBeVisible();
   await editor.click();
@@ -164,13 +228,13 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   await page.keyboard.insertText('\n% Browser edit');
   await page.getByRole('button', { name: /保\s*存/ }).click();
   await expect(page.getByText('文件已保存')).toBeVisible();
-  await expect(
-    page.getByText('源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。'),
-  ).toBeVisible();
+  await expect(page.getByText('待编译', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'artifacts/latex-workspace.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-  await page.getByRole('tab', { name: '图片画廊' }).click();
+  await page.getByRole('button', { name: '文件与产物', exact: true }).click();
+  await page.getByRole('menuitem', { name: '图片画廊' }).click();
+  await expect(page.locator('.workspace-panel-header')).toBeVisible();
   await page.locator('.figure-gallery .ant-image').first().click();
   await expect(page.locator('.ant-image-preview')).toBeVisible();
 });
@@ -223,29 +287,33 @@ for (const viewport of [
       });
     }
     await openFixture(page);
-    const content = page.locator('.artifact-content');
     const toolbar = page.locator('.artifact-toolbar');
+    const editor = page.locator('.monaco-editor').first();
     const top = (await toolbar.boundingBox())!.y;
-    await expect.poll(() => content.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-    await content.hover();
-    await page.mouse.wheel(0, 650);
-    await expect.poll(() => content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(editor).toContainText('研究证据与实验结果。');
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     expect((await toolbar.boundingBox())!.y).toBe(top);
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
       true,
     );
-    await page.getByRole('button', { name: '全屏查看' }).click();
-    await expect(page.locator('.artifact-expanded')).toBeVisible();
-    await page.getByRole('button', { name: '退出全屏' }).click();
-    await page.getByRole('tab', { name: /项目文件/ }).click();
-    await page.getByRole('button', { name: 'paper/main.tex', exact: true }).click();
-    const source = page.locator('.latex-source .source-preview');
-    await expect.poll(() => source.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
+    await page.getByRole('combobox', { name: '选择项目文件' }).fill('paper/main.tex');
+    await page
+      .locator('.directory-file')
+      .filter({ hasText: 'main.tex' })
+      .click();
+    const source = page.locator('.latex-source .monaco-editor');
+    await expect(source).toBeVisible();
+    const scroll = source.locator('.monaco-scrollable-element').first();
+    await expect.poll(() => scroll.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
     const sourceTop = (await toolbar.boundingBox())!.y;
     await source.hover();
     await page.mouse.wheel(0, 650);
-    await expect.poll(() => source.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect
+      .poll(async () => Number(await source.locator('.line-numbers').first().textContent()))
+      .toBeGreaterThan(1);
     expect((await toolbar.boundingBox())!.y).toBe(sourceTop);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     if (viewport.width < 700) {
@@ -263,3 +331,275 @@ for (const viewport of [
     await page.screenshot({ path: `artifacts/bounded-workbench-${viewport.width}.png` });
   });
 }
+
+test('conversation replays execution output and opens artifacts in the workspace', async ({
+  page,
+}) => {
+  await page.route('**/api/projects/*/activity?*', async (route) => {
+    const projectId = new URL(route.request().url()).pathname.split('/')[3];
+    const kinds = [
+      ['model_start', { phase: 'literature', iteration: 1 }],
+      [
+        'assistant_output',
+        { phase: 'literature', content: '已比较已有证据，接下来检查跨电芯泛化。' },
+      ],
+      [
+        'tool_start',
+        {
+          phase: 'literature',
+          iteration: 1,
+          call_id: 'read-1',
+          tool: 'read',
+          arguments: '{"path":"literature/RESEARCH_REPORT.md"}',
+        },
+      ],
+      [
+        'tool_end',
+        {
+          phase: 'literature',
+          iteration: 1,
+          call_id: 'read-1',
+          tool: 'read',
+          output: '已读取研究报告',
+          is_error: false,
+        },
+      ],
+      ['node_end', { node: 'literature', artifact: '文献证据整理完成。' }],
+    ];
+    const after = new URL(route.request().url()).searchParams.get('after');
+    await route.fulfill({
+      json: {
+        has_more: false,
+        events: after
+          ? []
+          : kinds.map(([kind, data], index) => ({
+              id: index + 100,
+              project_id: projectId,
+              run_id: 'fixture-run',
+              kind,
+              data,
+              created_at: `2026-10-24T09:00:0${index}Z`,
+            })),
+      },
+    });
+  });
+  await openFixture(page);
+  await expect(page.getByText('已比较已有证据，接下来检查跨电芯泛化。')).toBeVisible();
+  await page.locator('.tool-activity summary').click();
+  await expect(page.getByText('已读取研究报告')).toBeVisible();
+  await page.locator('.chat-artifact').click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  const separator = page.getByRole('separator', { name: '调整工作区宽度' });
+  await separator.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(separator).toHaveAttribute('aria-valuenow', '36');
+  await page.getByRole('button', { name: '展开工作区', exact: true }).click();
+  await expect(page.locator('.conversation-panel')).toBeHidden();
+  await page.getByRole('button', { name: '恢复分栏' }).click();
+  await page.reload();
+  await expect(page.getByText('已比较已有证据，接下来检查跨电芯泛化。')).toBeVisible();
+  await page.screenshot({ path: 'artifacts/conversation-workspace-desktop.png' });
+});
+
+test('mobile conversation sends checkpoint feedback and opens the artifact workspace', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openFixture(page);
+  await page.getByRole('button', { name: '研究对话', exact: true }).click();
+  let body: Record<string, unknown> | undefined;
+  await page.route('**/api/projects/*/runs', async (route) => {
+    body = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { id: 'mock-chat-run' } });
+  });
+  await page.getByLabel('专家反馈').fill('优先验证跨电芯泛化');
+  await page.getByRole('button', { name: '提交意见并继续' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
+  await expect.poll(() => body?.answer).toBe('优先验证跨电芯泛化');
+  expect(body?.action).toBe('review');
+  expect(typeof body?.checkpoint_token).toBe('string');
+  await page.screenshot({ path: 'artifacts/conversation-workspace-mobile.png' });
+  await page.locator('.chat-artifact').first().click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+});
+
+test('composer starts research and preserves its draft when submission fails', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '新建研究项目' }).click();
+  await page.getByLabel('项目名称').fill('对话启动测试');
+  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '对话启动测试' })).toBeVisible();
+  let shouldFail = true;
+  let body: Record<string, unknown> | undefined;
+  await page.route('**/api/projects/*/runs', async (route) => {
+    body = route.request().postDataJSON();
+    await route.fulfill({
+      status: shouldFail ? 409 : 202,
+      json: shouldFail ? { detail: '已有研究正在运行，请稍后重试' } : { id: 'composer-run' },
+    });
+  });
+  const draft = page.getByRole('textbox', { name: '研究指令', exact: true });
+  await draft.fill('请研究跨电芯寿命预测中的泛化误差。');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  await expect(page.getByText('已有研究正在运行，请稍后重试')).toBeVisible();
+  await expect(draft).toHaveValue('请研究跨电芯寿命预测中的泛化误差。');
+  shouldFail = false;
+  await draft.press('ControlOrMeta+Enter');
+  await expect(draft).toHaveValue('');
+  expect(body?.action).toBe('start');
+  expect(body?.mode).toBe('expert');
+  expect(body?.prompt).toBe('请研究跨电芯寿命预测中的泛化误差。');
+});
+
+test('new project answers identity questions without starting research and retains chat on reload', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '新建研究项目' }).click();
+  await page.getByLabel('项目名称').fill('普通问答测试');
+  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '普通问答测试' })).toBeVisible();
+  const url = page.url();
+  const draft = page.getByRole('textbox', { name: '研究指令', exact: true });
+  await draft.fill('你是谁？');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  await expect(draft).toHaveValue('');
+  await expect(
+    page.locator('.chat-markdown').filter({ hasText: '我是 Paper Agent' }),
+  ).toBeVisible();
+  await expect(page.getByText('运行请求已提交')).toHaveCount(0);
+  const id = url.split('/').pop();
+  const project = await (await page.request.get(`/api/projects/${id}`)).json();
+  expect(project.runs).toEqual([]);
+  expect(project.status).toBe('idle');
+  await page.reload();
+  await expect(page.locator('.user-message').filter({ hasText: '你是谁？' })).toBeVisible();
+  await expect(
+    page.locator('.chat-markdown').filter({ hasText: '我是 Paper Agent' }),
+  ).toBeVisible();
+});
+
+test('paper divider resizes with the keyboard and resets on double click', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('main.tex');
+  await page
+    .locator('.directory-file')
+    .filter({ hasText: 'main.tex' })
+    .click();
+  const divider = page.getByRole('separator', { name: '调整源码与 PDF 宽度' });
+  await expect(divider).toBeVisible();
+  const source = page.locator('.latex-source');
+  const before = (await source.boundingBox())!.width;
+  await divider.press('ArrowLeft');
+  await expect(divider).toHaveAttribute('aria-valuenow', '48');
+  expect((await source.boundingBox())!.width).toBeLessThan(before);
+  await divider.dblclick();
+  await expect(divider).toHaveAttribute('aria-valuenow', '50');
+});
+
+test('gallery filters images, recovers failed loads and opens the preview', async ({ page }) => {
+  await openFixture(page);
+  await page.route(/\/api\/projects\/.*\/download\?.*test.png/, (route) => route.abort());
+  await page.getByRole('tab', { name: '图片画廊' }).click();
+  await expect(page.getByText('图片加载失败', { exact: true })).toBeVisible();
+  await page.unroute(/\/api\/projects\/.*\/download\?.*test.png/);
+  await page.getByRole('button', { name: /重新加载/ }).click();
+  await expect(page.getByText('1 × 1', { exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: '筛选研究图片' }).fill('不存在');
+  await expect(page.getByText('没有匹配的图片')).toBeVisible();
+  await page.getByRole('textbox', { name: '筛选研究图片' }).fill('test');
+  await page.locator('.figure-gallery .ant-image').click();
+  await expect(page.locator('.ant-image-preview-img')).toBeVisible();
+});
+
+test('single image opens the shared sibling preview', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('figures/test.png');
+  await page
+    .locator('.directory-file')
+    .filter({ hasText: 'test.png' })
+    .click();
+  await page.locator('.image-preview .ant-image').click();
+  await expect(page.locator('.ant-image-preview-img')).toBeVisible();
+});
+
+test('message copy and reuse protect an existing composer draft', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page.getByRole('button', { name: '新建研究项目' }).click();
+  await page.getByLabel('项目名称').fill('消息操作测试');
+  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  const draft = page.getByRole('textbox', { name: '研究指令', exact: true });
+  await draft.fill('你是谁？');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  const reply = page.locator('.agent-message').filter({ has: page.locator('.chat-markdown') });
+  await expect(reply).toContainText('我是 Paper Agent');
+  await reply.getByRole('button', { name: '复制消息', exact: true }).click();
+  await expect(reply.getByRole('button', { name: '消息已复制' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('我是 Paper Agent');
+  await draft.fill('保留这条未发送的指令');
+  await page.getByRole('button', { name: '修改这条指令' }).click();
+  await expect(page.getByRole('dialog')).toContainText('替换输入框中未发送的草稿？');
+  await page.getByRole('button', { name: /取\s*消/ }).click();
+  await expect(draft).toHaveValue('保留这条未发送的指令');
+  await page.getByRole('button', { name: '修改这条指令' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
+  await expect(draft).toHaveValue('你是谁？');
+  await expect(draft).toBeFocused();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await page.screenshot({ path: 'artifacts/chat-bubbles-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'artifacts/chat-bubbles-mobile.png' });
+});
+
+test('completed project messages use routing instead of resuming improvement', async ({ page }) => {
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    project.status = 'completed';
+    project.state.status = 'completed';
+    project.state.current_node = 'improvement';
+    project.state.expert_checkpoint = null;
+    await route.fulfill({ response, json: project });
+  });
+  let body: Record<string, unknown> | undefined;
+  await page.route('**/api/projects/*/messages', async (route) => {
+    body = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { id: 'scoped-figure-task' } });
+  });
+  await page.route('**/api/projects/*/runs', () => {
+    throw new Error('Message must not resume the previous workflow node');
+  });
+  await openFixture(page, false);
+  await page.getByRole('textbox', { name: '研究指令' }).fill('只修改图一的配色，其他图不要动');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  await expect.poll(() => body?.prompt).toBe('只修改图一的配色，其他图不要动');
+  expect(body).not.toHaveProperty('action');
+  expect(body).not.toHaveProperty('start_node');
+  await page.unrouteAll({ behavior: 'wait' });
+});
+
+test('running project can send a status question without stopping the task', async ({ page }) => {
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    project.status = 'running';
+    project.state.status = 'running';
+    project.state.expert_checkpoint = null;
+    await route.fulfill({ response, json: project });
+  });
+  let prompt = '';
+  await page.route('**/api/projects/*/messages', async (route) => {
+    prompt = route.request().postDataJSON().prompt;
+    await route.fulfill({ json: { intent: 'chat', reply: '正在生成论文。' } });
+  });
+  await openFixture(page, false);
+  await page.getByRole('textbox', { name: '研究指令' }).fill('现在进度怎么样？');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  await expect.poll(() => prompt).toBe('现在进度怎么样？');
+  await expect(
+    page.locator('.chat-composer').getByRole('button', { name: '停止运行' }),
+  ).toBeVisible();
+  await page.unrouteAll({ behavior: 'wait' });
+});

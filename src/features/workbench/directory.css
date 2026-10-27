@@ -1,0 +1,83 @@
+.artifact-directory {
+  flex: 1;
+  min-width: 0;
+}
+.artifact-directory-popup {
+  width: min(560px, calc(100vw - 24px));
+  padding: 6px;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #18181b14;
+}
+.directory-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  color: #3f3f46;
+  font-size: 12px;
+  border-bottom: 1px solid #eeeef0;
+  margin-bottom: 6px;
+}
+.directory-caption > span:last-child {
+  margin-left: auto;
+  color: #a1a1aa;
+  font-size: 11px;
+}
+.directory-group,
+.directory-folder,
+.directory-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.directory-group {
+  color: #3f3f46;
+}
+.directory-group strong {
+  font-weight: 550;
+}
+.directory-group small {
+  color: #92929e;
+  background: #f4f4f5;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 18px;
+}
+.directory-folder {
+  color: #71717a;
+  font-size: 12px;
+}
+.directory-file {
+  color: #52525b;
+  font:
+    12px/1.8 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+}
+.directory-file > .anticon {
+  color: #92929e;
+  flex-shrink: 0;
+}
+.directory-file > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.artifact-directory-popup .ant-select-tree-node-content-wrapper {
+  min-width: 0;
+  overflow: hidden;
+}
+.artifact-directory-popup .ant-select-tree-treenode {
+  padding-block: 3px;
+}
+.directory-hint {
+  padding: 10px 12px 5px;
+  border-top: 1px solid #eeeef0;
+  color: #92929e;
+  font-size: 10px;
+}

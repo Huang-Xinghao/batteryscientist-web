@@ -1,0 +1,314 @@
+:root {
+  --ink: #18181b;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --surface: #fafafa;
+  color: var(--ink);
+  background: var(--surface);
+}
+::selection {
+  background: #dddde5;
+  color: #18181b;
+}
+.sidebar {
+  background: #29292e;
+  color: #c9c9cf;
+  border-right: 1px solid #ffffff0d;
+}
+.brand {
+  color: #fafafa;
+  letter-spacing: -0.7px;
+}
+.brand small,
+.sidebar .nav-caption,
+.sidebar-note > span,
+.sidebar-footer {
+  color: #85858f;
+}
+.brand-mark {
+  color: #fafafa;
+  background: linear-gradient(145deg, #3d3d43, #1c1c20);
+  border: 1px solid #ffffff24;
+  border-radius: 11px;
+  box-shadow:
+    inset 0 1px 0 #ffffff12,
+    0 4px 14px #0003;
+}
+.brand-mark .anticon {
+  transition: transform 0.35s ease;
+}
+.brand:hover .brand-mark .anticon {
+  transform: rotate(-12deg);
+}
+.sidebar .nav-item {
+  color: #9999a4;
+  border-radius: 9px;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.sidebar .nav-item.selected {
+  background: #ffffff10;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #ffffff09;
+}
+.sidebar .nav-item:hover {
+  background: #ffffff0b;
+  color: #fff;
+}
+.sidebar .workspace-avatar {
+  color: #ededf0;
+}
+.sidebar-note > .anticon {
+  color: #a1a1aa;
+}
+.connection-dot.online {
+  background: #c1c1cc;
+  box-shadow: 0 0 0 3px #ffffff0a;
+}
+.topbar {
+  background: #ffffffeb;
+  border-color: #eaeaec;
+  color: #85858f;
+}
+.topbar .user-avatar {
+  color: #52525b;
+  background: #f0f0f3;
+  border: 1px solid #e8e8ed;
+}
+.page-heading h1 {
+  color: #18181b;
+  letter-spacing: -1.6px;
+  font-weight: 650;
+}
+.eyebrow {
+  color: #92929e;
+  letter-spacing: 2px;
+  font-size: 10px;
+}
+.title-dot {
+  color: #a1a1aa;
+}
+.page-description {
+  color: #85858f;
+}
+.overview-strip {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  box-shadow: 0 2px 4px #18181b02;
+  border-radius: 14px;
+}
+.overview-item strong {
+  color: #202024;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.overview-item strong small {
+  letter-spacing: 0;
+}
+.stat-dot {
+  background: #414148;
+  box-shadow: 0 0 0 3px #f0f0f3;
+}
+.stat-1 {
+  background: #52525b;
+}
+.stat-2 {
+  background: #a1a1aa;
+}
+.stat-3 {
+  background: #d4d4d8;
+}
+.project-card {
+  border-color: #e8e8ec;
+  background: #fff;
+  border-radius: 14px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.project-card:hover {
+  border-color: #bcbcc6;
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 28px #18181b08,
+    0 2px 6px #18181b04;
+}
+.project-icon,
+.project-icon.tone-1,
+.project-icon.tone-2 {
+  color: #52525b;
+  background: linear-gradient(145deg, #fafafa, #f0f0f3);
+  border: 1px solid #e8e8ed;
+  border-radius: 10px;
+}
+.project-card h3 {
+  color: #27272a;
+  letter-spacing: -0.3px;
+}
+.ant-btn-primary:not(:disabled) {
+  box-shadow:
+    0 2px 4px #18181b12,
+    inset 0 1px 0 #ffffff12;
+}
+.ant-btn,
+.ant-select-selector,
+.ant-input-affix-wrapper {
+  transition: all 0.18s ease;
+}
+.ant-btn-primary:not(:disabled):hover {
+  background: #4b4b53 !important;
+  border-color: #4b4b53 !important;
+}
+.ant-segmented {
+  background: #f0f0f3;
+}
+.ant-segmented-item-selected {
+  box-shadow: 0 1px 4px #18181b0c;
+}
+.research-layout .workspace-panel-header,
+.workspace-panel-header > div {
+  color: #71717a;
+}
+.conversation-heading {
+  color: #52525b;
+}
+.agent-symbol {
+  background: #f4f4f5;
+  color: #27272a;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 2px 3px #18181b03;
+}
+.agent-symbol:hover {
+  transform: rotate(12deg);
+  transition: transform 0.2s;
+}
+.composer-box,
+.composer-area textarea {
+  border-color: #e4e4e7;
+}
+.composer-box:focus-within {
+  border-color: #a1a1aa;
+  box-shadow: 0 0 0 3px #18181b04;
+}
+.composer-submit,
+.send-button {
+  background: #3b3b42;
+  color: #fff;
+}
+.stage-card:hover:not(:disabled),
+.stage-card.current {
+  border-color: #bcbcc6;
+  background: #fafafa;
+}
+.paper-focus .file-selector {
+  background: #fafafa !important;
+  border-color: #e4e4e7 !important;
+}
+.latex-artifact .artifact-toolbar {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+}
+.latex-artifact .artifact-filename,
+.latex-artifact .artifact-filename > .anticon {
+  color: #3f3f46;
+}
+.latex-artifact .artifact-toolbar .ant-btn {
+  color: #52525b;
+  border-color: #dddde3;
+}
+.latex-artifact .artifact-toolbar .ant-btn-primary:not(:disabled) {
+  color: #fff;
+  background: #414148;
+  border-color: #414148;
+}
+.latex-artifact .paper-code-editor,
+.latex-artifact .latex-source {
+  background: #fff;
+}
+.latex-artifact .paper-editor-tools,
+.latex-artifact .paper-editor-status {
+  background: #fafafa;
+  color: #85858f;
+  border-color: #e8e8ed;
+}
+.paper-editor-tools > .paper-editor-language {
+  color: #52525b;
+}
+.paper-sync-state::before {
+  background: #71717a;
+}
+.latex-artifact .latex-pdf {
+  background: #ededf0;
+}
+.latex-artifact .latex-pdf .pane-heading {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+}
+.latex-artifact .paper-pane-divider {
+  background: #e4e4e7;
+  border-color: #d4d4d8;
+}
+.paradigm-map {
+  background: #fafafa;
+  border-color: #e4e4e7;
+}
+.paradigm-node {
+  box-shadow: 0 3px 12px #18181b06;
+}
+.paradigm-node:hover {
+  box-shadow: 0 6px 20px #18181b12;
+}
+.auth-screen {
+  background: radial-gradient(ellipse at 50% 25%, #fff 0%, #f4f4f5 70%);
+}
+.auth-card {
+  border: 1px solid #e4e4e7;
+  border-radius: 18px;
+  box-shadow: 0 20px 70px #18181b08;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.stat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 8px;
+  background: #f4f4f5;
+  color: #52525b;
+  border: 1px solid #e8e8ed;
+  border-radius: 7px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+.stat-icon.stat-1 {
+  background: #414148;
+  color: #fff;
+  border-color: #414148;
+}
+.overview-item:hover .stat-icon {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+.tone-1,
+.tone-2 {
+  background: #f4f4f5;
+  color: #71717a;
+}
+.chat-composer {
+  border-color: #dedee3;
+  box-shadow: 0 3px 16px #18181b04;
+}
+.chat-composer:focus-within {
+  border-color: #a1a1aa;
+  box-shadow: 0 0 0 3px #18181b04;
+}

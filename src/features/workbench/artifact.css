@@ -44,3 +44,236 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
+
+/* Editor interactions adapted from StoraGent LatexEditor.vue; see shared/file-preview/STORAGENT-LICENSE.txt. */
+.paper-code-editor {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+.paper-editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border-bottom: 1px solid #efefef;
+  color: #858585;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.paper-editor-tools > span:not(.ant-tooltip) {
+  margin-left: 8px;
+}
+.paper-editor-tools > span.paper-editor-shortcut {
+  margin-left: auto;
+  color: #a0a0a0;
+}
+.paper-editor-surface {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.paper-editor-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 5px 12px;
+  border-top: 1px solid #efefef;
+  background: #fbfbfb;
+  color: #858585;
+  font: 10px/1.4 monospace;
+  flex-shrink: 0;
+}
+.paper-editor-status > :first-child {
+  margin-right: auto;
+}
+.latex-workspace.show-source,
+.latex-workspace.show-pdf {
+  grid-template-columns: minmax(0, var(--source-width, 50%)) 7px minmax(0, 1fr);
+}
+.paper-pane-divider {
+  cursor: col-resize;
+  touch-action: none;
+  background: #f4f4f4;
+  border-inline: 1px solid #e6e6e6;
+  z-index: 1;
+}
+.paper-pane-divider:hover,
+.paper-pane-divider:focus-visible {
+  background: #d1d1d1;
+  outline: 0;
+}
+.latex-workspace:has(.paper-pane-divider:active) iframe {
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .latex-workspace.show-source,
+  .latex-workspace.show-pdf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .paper-pane-divider {
+    display: none;
+  }
+}
+@container (max-width: 740px) {
+  .latex-workspace.show-source,
+  .latex-workspace.show-pdf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .paper-pane-divider {
+    display: none;
+  }
+}
+
+/* A compact writing surface: muted chrome, green actions and colored TeX syntax. */
+.latex-artifact .artifact-toolbar {
+  min-height: 40px;
+  background: #f2f2f2;
+  border-bottom: 1px solid #e2e2e2;
+  gap: 12px;
+}
+.latex-artifact .artifact-filename {
+  color: #4b4b4b;
+  font: 600 12px/1.5 monospace;
+}
+.latex-artifact .artifact-filename > .anticon {
+  color: #717171;
+}
+.latex-artifact .artifact-toolbar .ant-btn {
+  border-color: #dcdcdc;
+  border-radius: 5px;
+  color: #5c5c5c;
+  background: #ffffffb3;
+}
+.latex-artifact .artifact-toolbar .ant-btn-primary:not(:disabled) {
+  color: white;
+  background: #626262;
+  border-color: #626262;
+}
+.latex-artifact .artifact-toolbar .ant-btn:disabled {
+  background: #ebebeb;
+  color: #a3a3a3;
+}
+.latex-artifact .latex-source {
+  background: #fdfdfd;
+  border: 0;
+}
+.latex-artifact .paper-code-editor {
+  background: #fdfdfd;
+}
+.latex-artifact .paper-editor-tools {
+  min-height: 35px;
+  padding: 2px 10px;
+  border-bottom-color: #e6e6e6;
+  background: #f7f7f7;
+}
+.paper-editor-tools > .paper-editor-language {
+  margin: 0 10px 0 0;
+  color: #585858;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.paper-sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.paper-sync-state::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #888888;
+}
+.paper-sync-state.is-dirty::before {
+  background: #c38d3c;
+}
+.latex-artifact .paper-editor-status {
+  min-height: 25px;
+  align-items: center;
+  padding: 3px 12px;
+  background: #f1f1f1;
+  border-color: #e6e6e6;
+  color: #7e7e7e;
+}
+.latex-artifact .latex-pdf {
+  background: #ebebeb;
+}
+.latex-artifact .latex-pdf .pane-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 35px;
+  padding: 2px 10px;
+  background: #f2f2f2;
+  border-color: #e1e1e1;
+}
+.pdf-pane-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6f6f6f;
+}
+.pdf-stale-indicator {
+  font-size: 10px;
+  color: #9b773a;
+  white-space: nowrap;
+}
+.latex-artifact .latex-pdf .ant-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+}
+.latex-artifact .latex-pdf .ant-select-selector {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.latex-artifact .latex-pdf .ant-empty {
+  margin: auto;
+  padding: 24px;
+  color: #949494;
+}
+.latex-artifact .paper-pane-divider {
+  background: #e5e5e5;
+  border-color: #d9d9d9;
+}
+.latex-artifact .paper-pane-divider:hover {
+  background: #b0b0b0;
+}
+@media (min-width: 901px) {
+  @container (min-width: 621px) {
+    .latex-artifact .latex-mobile-switch {
+      display: none;
+    }
+    .latex-artifact .latex-workspace {
+      grid-template-columns: minmax(0, var(--source-width, 50%)) 7px minmax(0, 1fr);
+    }
+    .latex-artifact .latex-workspace.show-pdf .latex-source,
+    .latex-artifact .latex-workspace.show-source .latex-pdf {
+      display: flex;
+    }
+    .latex-artifact .paper-pane-divider {
+      display: block;
+    }
+  }
+}
+@media (max-width: 700px) {
+  .latex-artifact .artifact-toolbar {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  .latex-artifact .artifact-actions {
+    gap: 4px !important;
+    flex-wrap: nowrap;
+  }
+  .latex-artifact .artifact-actions .ant-btn {
+    padding-inline: 5px;
+  }
+  .latex-artifact .paper-editor-shortcut {
+    display: none;
+  }
+}

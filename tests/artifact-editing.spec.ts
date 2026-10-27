@@ -9,12 +9,13 @@ async function openReport(page: Page) {
   if (page.viewportSize()!.width <= 700) {
     await page.getByRole('button', { name: '产物工作区', exact: true }).click();
   }
-  await expect(page.getByRole('heading', { name: '电池寿命研究' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeVisible();
+  await expect(page.getByText('编辑', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
   return page.url().split('/').pop()!;
 }
 
 async function appendDraft(page: Page, text: string) {
-  await page.getByText('编辑', { exact: true }).click();
   const editor = page.locator('.monaco-editor').first();
   await expect(editor).toBeVisible();
   await editor.click();
@@ -40,7 +41,7 @@ for (const width of [1512, 360]) {
     await openReport(page);
     await expect(
       page.getByText('运行中可编辑草稿；等待阶段审阅或停止运行后再保存，避免与 Agent 的修改冲突。'),
-    ).toBeVisible();
+    ).toHaveCount(0);
     const draftText = `运行中起草的修改（${width}）。`;
     await appendDraft(page, `\n\n${draftText}`);
     const save = page.getByRole('button', { name: /保\s*存/, exact: true });
@@ -55,12 +56,15 @@ for (const width of [1512, 360]) {
     running = false;
     await expect(save).toBeEnabled({ timeout: 10000 });
     await save.click();
-    await expect(page.getByText(draftText, { exact: true })).toBeVisible();
+    await expect(page.getByText('文件已保存', { exact: true })).toBeVisible();
+    await expect(page.locator('.monaco-editor').first()).toContainText(draftText);
     await page.reload();
     if (width <= 700) {
       await page.getByRole('button', { name: '产物工作区', exact: true }).click();
     }
-    await expect(page.getByText(draftText, { exact: true })).toBeVisible();
+    await page.locator('.monaco-editor').first().click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(page.locator('.monaco-editor').first()).toContainText(draftText);
   });
 }
 
@@ -86,17 +90,56 @@ test('concurrent file changes retain the draft and require explicit reload', asy
   await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
 });
 
-test('failed editor chunk falls back to an editable draft without losing the workspace', async ({
+test('editor stays available when a deployment removes deferred editor assets', async ({
   page,
 }) => {
-  await page.route(/\/assets\/Editor-[^/]+\.js$/, (route) => route.abort());
-  await openReport(page);
-  await page.getByText('编辑', { exact: true }).click();
-  const editor = page.getByRole('textbox', { name: '文件文本编辑器' });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
+  await page.route(/\/assets\/(?:Editor|editor)-[^/]+\.js$/, (route) => route.abort());
+  await page
+    .getByRole('link')
+    .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })
+    .click();
+  const editor = page.locator('.monaco-editor').first();
   await expect(editor).toBeVisible();
-  await editor.fill((await editor.inputValue()) + '\n\n备用编辑器的修改。');
+  await expect(page.locator('.editor-fallback')).toHaveCount(0);
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('\n\n发布后编辑器仍可保存。');
   await page.getByRole('button', { name: /保\s*存/, exact: true }).click();
-  await expect(page.getByText('备用编辑器的修改。', { exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.getByText('备用编辑器的修改。', { exact: true })).toBeVisible();
+  await expect(page.getByText('文件已保存')).toBeVisible();
+  await expect(editor).toContainText('发布后编辑器仍可保存。');
+});
+
+test('save shortcut keeps edits typed while the saved snapshot is in flight', async ({ page }) => {
+  const id = await openReport(page);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let received!: () => void;
+  const started = new Promise<void>((resolve) => {
+    received = resolve;
+  });
+  await page.route(/\/api\/projects\/[^/]+\/file\?/, async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue();
+    received();
+    await gate;
+    await route.continue();
+  });
+  await appendDraft(page, '\n已提交的快照。');
+  await page.keyboard.press('ControlOrMeta+s');
+  await started;
+  await page.keyboard.insertText('\n保存途中继续输入。');
+  release();
+  await expect(page.getByText('文件已保存')).toBeVisible();
+  await expect(page.locator('.monaco-editor').first()).toContainText('保存途中继续输入。');
+  await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeEnabled();
+  const saved = await (
+    await page.request.get(`/api/projects/${id}/file?path=literature%2FRESEARCH_REPORT.md`)
+  ).json();
+  expect(saved.content).toContain('已提交的快照。');
+  expect(saved.content).not.toContain('保存途中继续输入。');
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
 });

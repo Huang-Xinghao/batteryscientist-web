@@ -67,21 +67,5 @@ export function AuthGate({ children }: { children: ReactNode }) {
         </Card>
       </div>
     );
-  return (
-    <>
-      {session.data.enabled && (
-        <Button
-          className="logout-button"
-          onClick={async () => {
-            await request('/auth/logout', { method: 'POST' });
-            client.clear();
-            window.location.reload();
-          }}
-        >
-          退出登录
-        </Button>
-      )}
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

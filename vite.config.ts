@@ -25,6 +25,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
+          editor: ['@monaco-editor/react', 'monaco-editor/esm/vs/editor/editor.api.js'],
           antd: ['antd', '@ant-design/icons'],
           markdown: ['react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
         },

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Image, Segmented, Select, Skeleton, Space, Spin } from 'antd';
@@ -10,6 +10,9 @@ import rehypeKatex from 'rehype-katex';
 import { api, ApiError, type ProjectFile } from '../../api/client';
 import './artifact.css';
 import Editor from './SafeEditor';
+import { PaneDivider } from '../../shared/file-preview/PaneDivider';
+import { isImagePath } from '../../shared/file-preview/display';
+import { siblingImages } from '../../shared/file-preview/siblingImages';
 export function Artifact({
   projectId,
   path,
@@ -25,21 +28,30 @@ export function Artifact({
 }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
-  const [mode, setMode] = useState('预览');
+  const isMarkdown = /\.md$/i.test(path);
+  const isTex = /\.tex$/i.test(path);
+  const inlineEdit = isMarkdown || isTex;
+  const images = siblingImages(path, files);
+  const [imagePreview, setImagePreview] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [mode, setMode] = useState(inlineEdit ? '编辑' : '预览');
   const [baseContent, setBaseContent] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [draft, setDraft] = useState('');
+  const [baseHash, setBaseHash] = useState('');
+  const dirty = mode === '编辑' && draft !== baseContent;
   const file = useQuery({
     queryKey: ['file', projectId, path],
     queryFn: () => api.file(projectId, path),
     enabled: !!path,
-    refetchInterval: running && mode === '预览' ? 6000 : false,
-    refetchOnWindowFocus: mode === '预览',
+    refetchInterval: running && (mode === '预览' || (inlineEdit && !dirty)) ? 6000 : false,
+    refetchOnWindowFocus: mode === '预览' || (inlineEdit && !dirty),
   });
   const [expanded, setExpanded] = useState(false);
   const [pdfPath, setPdfPath] = useState('');
   const [latexPane, setLatexPane] = useState('source');
   const [savedSource, setSavedSource] = useState(false);
-  const isTex = /\.tex$/i.test(path);
+  const [sourceWidth, setSourceWidth] = useState(50);
   const pdfs = files.filter((file) => /\.pdf$/i.test(file.path));
   const pairedPdf =
     pdfs.find((file) => file.path === path.replace(/\.tex$/i, '.pdf'))?.path ||
@@ -50,31 +62,36 @@ export function Artifact({
   const source = files.find((file) => file.path === path);
   const stalePdf = savedSource || (pdf && source && source.modified > pdf.modified);
 
-  const [draft, setDraft] = useState('');
-  const [baseHash, setBaseHash] = useState('');
   useEffect(() => {
-    setMode('预览');
+    setMode(inlineEdit ? '编辑' : '预览');
     setPdfPath('');
     setSavedSource(false);
     setDraft('');
     setBaseHash('');
     setBaseContent('');
     setSaveError('');
-  }, [path, projectId]);
+  }, [path, projectId, inlineEdit]);
+  useEffect(() => {
+    if (!inlineEdit || !file.data?.editable || dirty) return;
+    setDraft(file.data.content || '');
+    setBaseContent(file.data.content || '');
+    setBaseHash(file.data.sha256 || '');
+    setMode('编辑');
+  }, [inlineEdit, file.data, dirty, mode]);
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: (snapshot: string) => {
       if (running) throw new Error('任务仍在运行，请等待阶段审阅或停止运行后保存。');
-      return api.save(projectId, path, draft, baseHash);
+      return api.save(projectId, path, snapshot, baseHash);
     },
-    onSuccess: (data) => {
+    onSuccess: (data, snapshot) => {
       client.setQueryData(['file', projectId, path], data);
       client.invalidateQueries({ queryKey: ['project', projectId] });
       setBaseHash(data.sha256 || '');
-      setBaseContent(data.content || '');
+      setBaseContent(snapshot);
       setSaveError('');
       message.success('文件已保存');
       if (isTex) setSavedSource(true);
-      else setMode('预览');
+      // New typing made while this snapshot saves stays in the editor.
       client.invalidateQueries({ queryKey: ['files', projectId] });
     },
     onError: (error: Error) => {
@@ -86,7 +103,6 @@ export function Artifact({
       message.error(error.message);
     },
   });
-  const dirty = mode === '编辑' && draft !== baseContent;
   const blocker = useBlocker(dirty);
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
@@ -131,17 +147,21 @@ export function Artifact({
       </div>
     );
   return (
-    <div className={`artifact-panel ${expanded ? 'artifact-expanded' : ''}`}>
+    <div
+      className={`artifact-panel ${isTex ? 'latex-artifact' : ''} ${expanded ? 'artifact-expanded' : ''}`}
+    >
       <div className="artifact-toolbar">
         <span className="artifact-filename" title={path}>
           <FileTextOutlined />
           {path.split('/').pop()}
         </span>
         <Space wrap className="artifact-actions">
-          <Button size="small" onClick={() => setExpanded(!expanded)}>
-            {expanded ? '退出全屏' : '全屏查看'}
-          </Button>
-          {file.data?.editable && (
+          {!isMarkdown && (
+            <Button size="small" onClick={() => setExpanded(!expanded)}>
+              {expanded ? '退出全屏' : '全屏查看'}
+            </Button>
+          )}
+          {file.data?.editable && !inlineEdit && (
             <Segmented
               size="small"
               value={mode}
@@ -166,7 +186,7 @@ export function Artifact({
               icon={<SaveOutlined />}
               loading={save.isPending}
               disabled={running || !dirty}
-              onClick={() => save.mutate()}
+              onClick={() => save.mutate(draft)}
             >
               保存
             </Button>
@@ -198,14 +218,6 @@ export function Artifact({
           />
         </Space>
       </div>
-      {file.data?.editable && running && (
-        <Alert
-          className="artifact-edit-notice"
-          type="info"
-          banner
-          message="运行中可编辑草稿；等待阶段审阅或停止运行后再保存，避免与 Agent 的修改冲突。"
-        />
-      )}
       {saveError && (
         <Alert
           className="artifact-edit-notice"
@@ -235,7 +247,7 @@ export function Artifact({
           }
         />
       )}
-      {dirty && (
+      {dirty && !isTex && (
         <Alert type="warning" banner message="有未保存的修改，请在切换文件或页面前保存。" />
       )}
       <div
@@ -258,19 +270,6 @@ export function Artifact({
           />
         ) : isTex ? (
           <>
-            <Alert
-              type="info"
-              showIcon
-              message="LaTeX 论文工作区"
-              description="保存后，在“继续研究 → 编译交付”更新 PDF。"
-            />
-            {(dirty || stalePdf) && (
-              <Alert
-                type="warning"
-                banner
-                message="源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。"
-              />
-            )}
             <Segmented
               className="latex-mobile-switch"
               aria-label="论文面板"
@@ -281,15 +280,24 @@ export function Artifact({
                 { label: 'PDF 预览', value: 'pdf' },
               ]}
             />
-            <div className={`latex-workspace show-${latexPane}`}>
+            <div
+              className={`latex-workspace show-${latexPane}`}
+              style={{ '--source-width': `${sourceWidth}%` } as CSSProperties}
+            >
               <section className="latex-source">
-                <div className="pane-heading">
-                  LaTeX 源码 · {mode === '编辑' ? '编辑中' : '只读'}
-                </div>
-                {mode === '编辑' ? (
+                {file.data?.editable ? (
                   <Suspense fallback={<Spin className="editor-loading" />}>
                     <div className="editor-host">
-                      <Editor value={draft} path={path} onChange={setDraft} />
+                      <Editor
+                        value={draft}
+                        path={path}
+                        onChange={setDraft}
+                        dirty={dirty}
+                        saving={save.isPending}
+                        onSave={() => {
+                          if (!running && dirty && !save.isPending) save.mutate(draft);
+                        }}
+                      />
                     </div>
                   </Suspense>
                 ) : (
@@ -298,9 +306,15 @@ export function Artifact({
                   </pre>
                 )}
               </section>
+              <PaneDivider value={sourceWidth} onChange={setSourceWidth} />
               <section className="latex-pdf">
                 <div className="pane-heading">
-                  PDF 预览{' '}
+                  <span className="pdf-pane-label">PDF</span>
+                  {(dirty || stalePdf) && (
+                    <span className="pdf-stale-indicator" title="源码已修改，PDF 待重新编译">
+                      待编译
+                    </span>
+                  )}
                   <Select
                     aria-label="选择论文 PDF"
                     placeholder="选择已有 PDF"
@@ -313,7 +327,7 @@ export function Artifact({
                   <iframe
                     className="pdf-preview"
                     title="论文 PDF 对照预览"
-                    src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}`}
+                    src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}#toolbar=0&view=FitH`}
                   />
                 ) : (
                   <Empty description="尚无已编译 PDF，完成编译交付后可在这里对照查看" />
@@ -324,16 +338,54 @@ export function Artifact({
         ) : mode === '编辑' ? (
           <Suspense fallback={<Spin className="editor-loading" />}>
             <div className="editor-host">
-              <Editor value={draft} path={path} onChange={setDraft} />
+              <Editor
+                value={draft}
+                path={path}
+                onChange={setDraft}
+                dirty={dirty}
+                saving={save.isPending}
+                onSave={() => {
+                  if (!running && dirty && !save.isPending) save.mutate(draft);
+                }}
+              />
             </div>
           </Suspense>
         ) : file.data?.kind === 'binary' ? (
           path.endsWith('.pdf') ? (
             <iframe className="pdf-preview" title={path} src={api.download(projectId, path)} />
-          ) : /\.(png|jpe?g|webp)$/i.test(path) ? (
+          ) : isImagePath(path) ? (
             <div className="image-preview">
-              <Image alt={path} src={api.download(projectId, path)} />
-              <p className="muted">点击图片可放大、缩小、旋转和查看原图</p>
+              <Image.PreviewGroup
+                items={images.map((image) => ({
+                  src: api.download(projectId, image.path),
+                  alt: image.path,
+                }))}
+                preview={{
+                  visible: imagePreview,
+                  current: imageIndex,
+                  onVisibleChange: setImagePreview,
+                  onChange: setImageIndex,
+                }}
+              >
+                <Image
+                  alt={path}
+                  src={api.download(projectId, path)}
+                  preview={{
+                    onVisibleChange: (open) => {
+                      if (open) {
+                        setImageIndex(
+                          Math.max(
+                            0,
+                            images.findIndex((image) => image.path === path),
+                          ),
+                        );
+                        setImagePreview(true);
+                      }
+                    },
+                  }}
+                />
+              </Image.PreviewGroup>
+              <p className="muted">点击放大，可切换查看同目录图片、缩放和旋转</p>
             </div>
           ) : (
             <Empty description="此文件可下载后查看" />
@@ -373,7 +425,7 @@ function resolveImage(report: string, src: string | undefined, files: ProjectFil
   try {
     const url = new URL(src, `https://project.invalid/${report}`);
     const path = decodeURIComponent(url.pathname.slice(1));
-    return files.find((file) => file.path === path && /\.(png|jpe?g|webp)$/i.test(path))?.path;
+    return files.find((file) => file.path === path && isImagePath(path))?.path;
   } catch {
     return undefined;
   }

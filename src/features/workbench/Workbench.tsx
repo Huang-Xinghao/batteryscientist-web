@@ -1,59 +1,36 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  App,
-  Button,
-  Drawer,
-  Empty,
-  Input,
-  List,
-  Progress,
-  Select,
-  Skeleton,
-  Space,
-  Spin,
-  Table,
-  Tabs,
-  Tag,
-  Tooltip,
-} from 'antd';
+import { Alert, App, Button, Drawer, Dropdown, Empty, Skeleton, Space, Tabs, Tooltip } from 'antd';
 import {
   ArrowLeftOutlined,
-  ArrowRightOutlined,
-  CheckCircleFilled,
-  CheckOutlined,
   ClockCircleOutlined,
-  FileOutlined,
+  FileTextOutlined,
   FolderOpenOutlined,
-  LoadingOutlined,
+  FullscreenExitOutlined,
+  FullscreenOutlined,
+  MessageOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
   StopOutlined,
 } from '@ant-design/icons';
 import { Link, useParams } from 'react-router-dom';
-import { active, api, statusLabels } from '../../api/client';
-import type { NodeInfo, RunInput } from '../../api/client';
+import { active, api, type NodeInfo, type RunInput } from '../../api/client';
 import { Status } from '../../components/Status';
-import { formatDate } from '../../lib/date';
 import { Artifact } from './Artifact';
+import { ArtifactDirectory } from './ArtifactDirectory';
+import { Conversation } from './Conversation';
 import { FigureGallery } from './FigureGallery';
 import { RunDialog } from './RunDialog';
-const reports: Record<string, string> = {
-  literature: 'literature/RESEARCH_REPORT.md',
-  data_search: 'data-search/DATA_REPORT.md',
-  ideas: 'idea-stage/IDEA_REPORT.md',
-  refine: 'refine-logs/FINAL_PROPOSAL.md',
-  experiment_plan: 'refine-logs/EXPERIMENT_PLAN.md',
-  experiment_bridge: 'refine-logs/EXPERIMENT_TRACKER.md',
-  paper_plan: 'PAPER_PLAN.md',
-  paper_figure: 'figures/figure_plan.md',
-  paper_compile: 'paper/main.pdf',
-  improvement: 'paper/main.pdf',
-  paper_write: 'paper/main.tex',
-};
+import { reports } from './stages';
+import { useActivity } from './useActivity';
+
 export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
   const { id = '' } = useParams();
+  // A project owns its drafts, open files and conversation scroll position.
+  return <ProjectWorkbench key={id} id={id} nodes={nodes} />;
+}
+
+function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
   const project = useQuery({
@@ -66,67 +43,46 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
     queryFn: () => api.files(id),
     refetchInterval: 10000,
   });
+  const [activityOpen, setActivityOpen] = useState(false);
   const logs = useQuery({
     queryKey: ['log', id],
     queryFn: () => api.log(id),
-    refetchInterval: project.data && active(project.data.status) ? 2000 : 10000,
+    enabled: activityOpen,
+    refetchInterval: activityOpen ? 3000 : false,
   });
-  const [selectedNode, setSelectedNode] = useState('');
+  const activity = useActivity(id);
   const [selectedFile, setSelectedFile] = useState('');
+  const [selectedNode, setSelectedNode] = useState('');
   const [runOpen, setRunOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
-  const [answer, setAnswer] = useState('');
   const [tab, setTab] = useState('report');
-  const [streamState, setStreamState] = useState('connecting');
+  const [mobilePane, setMobilePane] = useState('conversation');
+  const [maximized, setMaximized] = useState(false);
+  const [chatWidth, setChatWidth] = useState(38);
+  const [userResized, setUserResized] = useState(false);
   const dirtyRef = useRef(false);
-  function selectFile(path: string) {
-    const select = () => {
-      dirtyRef.current = false;
-      setSelectedFile(path);
-    };
-    if (dirtyRef.current) modal.confirm({ title: '放弃未保存的修改？', onOk: select });
-    else select();
-  }
-  useEffect(() => {
-    const events = new EventSource(`/api/projects/${id}/events`);
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    events.onopen = () => setStreamState('connected');
-    events.onerror = () => setStreamState('reconnecting');
-    events.onmessage = () => {
-      // Coalesce replay bursts into a single refresh.
-      if (timer) return;
-      timer = setTimeout(() => {
-        client.invalidateQueries({ queryKey: ['project', id] });
-        client.invalidateQueries({ queryKey: ['files', id] });
-        client.invalidateQueries({ queryKey: ['log', id] });
-        timer = undefined;
-      }, 500);
-    };
-    return () => {
-      events.close();
-      if (timer) clearTimeout(timer);
-    };
-  }, [id, client]);
-  useEffect(() => {
-    setSelectedNode('');
-    setSelectedFile('');
-    setAnswer('');
-  }, [id]);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef(false);
   const run = useMutation({
     mutationFn: (values: RunInput) => api.run(id, values),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setRunOpen(false);
-      setAnswer('');
-      setReviewOpen(false);
       client.invalidateQueries({ queryKey: ['project', id] });
       client.invalidateQueries({ queryKey: ['projects'] });
-      message.success('运行请求已提交');
+      if ('id' in result) message.success('运行请求已提交');
     },
-    onError: (e: Error) => {
-      message.error(e.message);
+    onError: (reason: Error) => {
+      message.error(reason.message);
       client.invalidateQueries({ queryKey: ['project', id] });
     },
+  });
+  const sendMessage = useMutation({
+    mutationFn: (body: { prompt: string; mode: 'auto' | 'expert' }) => api.message(id, body),
+    onSuccess: (result) => {
+      client.invalidateQueries({ queryKey: ['project', id] });
+      client.invalidateQueries({ queryKey: ['projects'] });
+      if ('id' in result) message.success('任务已提交');
+    },
+    onError: (reason: Error) => message.error(reason.message),
   });
   const stop = useMutation({
     mutationFn: () => api.stop(id),
@@ -134,8 +90,35 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
       message.success('已请求停止，正在保存执行状态');
       client.invalidateQueries({ queryKey: ['project', id] });
     },
-    onError: (e: Error) => message.error(e.message),
+    onError: (reason: Error) => message.error(reason.message),
   });
+  function stopRun() {
+    modal.confirm({
+      title: '停止当前运行？',
+      content: '将中断当前模型或实验进程并保留已保存的产物。后续可从已有节点恢复。',
+      okText: '停止运行',
+      okButtonProps: { danger: true },
+      onOk: () => stop.mutateAsync(),
+    });
+  }
+  function openFile(path: string, node?: string) {
+    if (path === file) {
+      if (node) setSelectedNode(node);
+      setTab('report');
+      setMobilePane('workspace');
+      return;
+    }
+    const open = () => {
+      dirtyRef.current = false;
+      setSelectedFile(path);
+      if (node) setSelectedNode(node);
+      setTab('report');
+      setMobilePane('workspace');
+    };
+    if (dirtyRef.current && path !== file)
+      modal.confirm({ title: '放弃未保存的修改？', onOk: open });
+    else open();
+  }
   if (project.isPending)
     return (
       <div className="page">
@@ -157,203 +140,198 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
   const p = project.data;
   const running = active(p.status);
   const checkpoint = p.status === 'awaiting_user' ? p.state.expert_checkpoint : undefined;
-  const currentNode = selectedNode || p.state.current_node || nodes[0]?.id;
-  const completedNodes = new Set(
-    p.state.history?.filter((h) => nodes.some((n) => n.id === h.node)).map((h) => h.node),
-  );
   const fileList = files.data?.files || [];
+  const currentNode =
+    selectedNode ||
+    (p.runs[0]?.options.action === 'revise' ? String(p.progress.current_node || '') : '') ||
+    p.state.current_node ||
+    nodes[0]?.id;
+  const completedNodes = new Set(p.state.history?.map((entry) => entry.node));
   const defaultFile = checkpoint?.node === currentNode ? checkpoint.report : reports[currentNode];
-  const file = selectedFile || (fileList.some((f) => f.path === defaultFile) ? defaultFile : '');
-  const changeNode = (node: string) => {
-    const change = () => {
-      dirtyRef.current = false;
-      setSelectedNode(node);
-      setSelectedFile('');
-      setTab('report');
-    };
-    if (dirtyRef.current) modal.confirm({ title: '放弃未保存的修改？', onOk: change });
-    else change();
-  };
-  const phase = nodes.find((n) => n.id === currentNode);
+  const file =
+    selectedFile || (fileList.some((entry) => entry.path === defaultFile) ? defaultFile : '');
+  const latexOpen = /\.tex$/i.test(file) && tab === 'report';
+  const paperFocus = tab === 'report' && (latexOpen || /^paper\/.*\.pdf$/i.test(file));
+  const visibleChatWidth = latexOpen && !userResized ? 28 : chatWidth;
+  const phase = nodes.find((node) => node.id === currentNode);
+  async function send(text: string, mode: 'auto' | 'expert') {
+    if (dirtyRef.current) {
+      message.warning('请先保存产物修改，再提交研究指令');
+      throw new Error('unsaved');
+    }
+    if (checkpoint) {
+      const values: RunInput = {
+        action: 'review',
+        answer: text,
+        checkpoint_token: p.checkpoint_token,
+      };
+      await new Promise<void>((resolve, reject) => {
+        modal.confirm({
+          title: text.trim() ? '提交意见并继续研究？' : '确认当前产物并继续？',
+          content: '系统将校验当前产物版本，并根据反馈继续研究。',
+          onOk: async () => {
+            try {
+              await run.mutateAsync(values);
+              resolve();
+            } catch (reason) {
+              reject(reason);
+              throw reason;
+            }
+          },
+          onCancel: () => reject(new Error('cancelled')),
+        });
+      });
+    } else await sendMessage.mutateAsync({ prompt: text, mode });
+  }
   return (
     <div className="workbench-page">
-      <div className="workbench-heading">
-        <div>
-          <Link to="/" className="back-link">
-            <ArrowLeftOutlined /> 研究项目
+      <header className="workbench-heading">
+        <div className="project-identity">
+          <Link to="/" className="back-link" aria-label="返回研究项目" title="返回研究项目">
+            <ArrowLeftOutlined />
           </Link>
-          <h1>
-            {p.name}
-            <Status value={p.status} />
-          </h1>
+          <h1 title={p.name}>{p.name}</h1>
+          <Status value={p.status} />
           <Tooltip title={p.path}>
-            <p className="project-path">
-              <FolderOpenOutlined /> {p.path}
-            </p>
+            <span className="project-path" tabIndex={0} aria-label={`项目路径：${p.path}`}>
+              <FolderOpenOutlined />
+            </span>
           </Tooltip>
         </div>
-        <Space>
-          <Button onClick={() => setActivityOpen(true)} icon={<ClockCircleOutlined />}>
+        <Space size={6}>
+          <Button size="small" icon={<ClockCircleOutlined />} onClick={() => setActivityOpen(true)}>
             运行动态
           </Button>
-          <Tooltip title="刷新">
+          <Button
+            size="small"
+            aria-label="刷新"
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              project.refetch();
+              files.refetch();
+            }}
+          />
+          {running ? (
             <Button
-              aria-label="刷新"
-              icon={<ReloadOutlined />}
-              onClick={() => {
-                project.refetch();
-                files.refetch();
-                logs.refetch();
-              }}
-            />
-          </Tooltip>
-          {p.status === 'external_running' ? (
-            <Tooltip title="该任务由终端启动，请在原终端管理；工作台可以浏览研究产物。">
-              <Button disabled icon={<LoadingOutlined />}>
-                终端运行中
-              </Button>
-            </Tooltip>
-          ) : running ? (
-            <Button
+              size="small"
               danger
               icon={<StopOutlined />}
+              disabled={p.status === 'external_running'}
               loading={stop.isPending || p.status === 'stopping'}
-              onClick={() =>
-                modal.confirm({
-                  title: '停止当前运行？',
-                  content: '将中断当前模型或实验进程并保留已保存的产物。后续可从已有节点恢复。',
-                  okText: '停止运行',
-                  okButtonProps: { danger: true },
-                  onOk: () => stop.mutateAsync(),
-                })
-              }
+              onClick={stopRun}
             >
-              停止运行
+              {p.status === 'external_running' ? '终端运行中' : '停止运行'}
             </Button>
           ) : (
             <Button
-              type="primary"
+              size="small"
               icon={<PlayCircleOutlined />}
-              size="large"
-              onClick={() => (checkpoint ? setReviewOpen(true) : setRunOpen(true))}
+              onClick={() => setRunOpen(true)}
+              disabled={!!checkpoint}
             >
-              {checkpoint ? '审阅并继续' : p.state.task_prompt ? '继续研究' : '启动研究'}
+              {p.state.task_prompt ? '继续研究' : '启动研究'}
             </Button>
           )}
         </Space>
-      </div>
-      <div className={`collaboration-bar ${checkpoint ? 'needs-review' : ''}`}>
-        <span className="collaboration-indicator">{checkpoint ? '✦' : '◉'}</span>
-        <div>
-          <strong>
-            {checkpoint
-              ? '专家问答 · 等待你的判断'
-              : p.state.mode === 'expert'
-                ? '专家模式已启用'
-                : '研究协作'}
-          </strong>
-          <span>
-            {checkpoint
-              ? `${checkpoint.questions?.length || 0} 个问题待回答，审阅后继续研究`
-              : p.state.mode === 'expert'
-                ? '每个阶段完成后，审阅产物并回答问题'
-                : '开启专家模式，逐阶段参与研究决策'}
-          </span>
-        </div>
+      </header>
+      <nav className="mobile-pane-nav" aria-label="工作台视图">
         <Button
-          size="small"
-          type={checkpoint ? 'primary' : 'text'}
-          disabled={!checkpoint && running}
-          onClick={() => (checkpoint ? setReviewOpen(true) : setRunOpen(true))}
+          aria-label="研究对话"
+          type={mobilePane === 'conversation' ? 'primary' : 'text'}
+          icon={<MessageOutlined />}
+          onClick={() => {
+            setMobilePane('conversation');
+            setMaximized(false);
+          }}
         >
-          {checkpoint ? '查看问题并回答' : '协作方式设置'}
+          研究对话
         </Button>
-      </div>
-      {(p.runs[0]?.error || p.state.error) && !running && (
-        <Alert
-          className="run-alert"
-          closable
-          type="error"
-          showIcon
-          message="上次运行需要处理"
-          description={p.runs[0]?.error || p.state.error}
+        <Button
+          aria-label="产物工作区"
+          type={mobilePane === 'workspace' ? 'primary' : 'text'}
+          icon={<FolderOpenOutlined />}
+          onClick={() => setMobilePane('workspace')}
+        >
+          产物工作区
+        </Button>
+      </nav>
+      <div
+        ref={layoutRef}
+        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''}`}
+        style={{ '--chat-width': `${visibleChatWidth}%` } as CSSProperties}
+      >
+        <Conversation
+          project={p}
+          files={fileList}
+          nodes={nodes}
+          events={activity.events}
+          connection={activity.connection}
+          activityError={activity.error}
+          hasOlder={activity.hasOlder}
+          loadingOlder={activity.loadingOlder}
+          loadOlder={activity.loadOlder}
+          onOpen={openFile}
+          onSend={send}
+          onStop={stopRun}
+          onSettings={() => setRunOpen(true)}
+          pending={run.isPending || sendMessage.isPending}
         />
-      )}
-      <div className="workbench-grid">
-        <aside className="phase-panel">
-          <div className="panel-caption">
-            研究流程 <span>{completedNodes.size}/11</span>
-          </div>
-          <div className="phase-progress">
-            <Progress
-              percent={Math.round((completedNodes.size / 11) * 100)}
-              showInfo={false}
-              strokeColor="#49876b"
-              size="small"
-            />
-          </div>
-          <div className="phase-list">
-            {nodes.map((node, i) => {
-              const isCurrent = p.state.current_node === node.id;
-              const done = completedNodes.has(node.id);
-              return (
-                <button
-                  key={node.id}
-                  className={`phase-item ${currentNode === node.id ? 'selected' : ''} ${done ? 'done' : ''}`}
-                  onClick={() => changeNode(node.id)}
-                >
-                  <span className="phase-number">
-                    {isCurrent && running ? (
-                      <LoadingOutlined spin />
-                    ) : done ? (
-                      <CheckOutlined />
-                    ) : (
-                      String(i + 1).padStart(2, '0')
-                    )}
-                  </span>
-                  <span>
-                    {node.label}
-                    <small>
-                      {isCurrent
-                        ? statusLabels[p.status] || p.status
-                        : done
-                          ? '已有执行记录'
-                          : '等待执行'}
-                    </small>
-                  </span>
-                  {currentNode === node.id && <span className="phase-selected-dot" />}
-                </button>
+        <div
+          className="workspace-resizer"
+          role="separator"
+          aria-label="调整工作区宽度"
+          aria-orientation="vertical"
+          aria-valuemin={25}
+          aria-valuemax={55}
+          aria-valuenow={visibleChatWidth}
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+              event.preventDefault();
+              setUserResized(true);
+              setChatWidth(() =>
+                Math.min(55, Math.max(25, visibleChatWidth + (event.key === 'ArrowLeft' ? -2 : 2))),
               );
-            })}
-          </div>
-          <div className="phase-footer">
-            <span className={`connection-dot ${streamState === 'connected' ? 'online' : ''}`} />
-            {streamState === 'connected'
-              ? '实时同步已连接'
-              : streamState === 'connecting'
-                ? '正在建立连接'
-                : '重连中 · 定时刷新仍可用'}
-          </div>
-        </aside>
-        <section className="workspace-panel">
+            }
+          }}
+          onPointerDown={(event) => {
+            setUserResized(true);
+            dragRef.current = true;
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!dragRef.current || !layoutRef.current) return;
+            const bounds = layoutRef.current.getBoundingClientRect();
+            setChatWidth(
+              Math.min(55, Math.max(25, ((event.clientX - bounds.left) / bounds.width) * 100)),
+            );
+          }}
+          onPointerUp={(event) => {
+            dragRef.current = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={() => {
+            dragRef.current = false;
+          }}
+        >
+          <span />
+        </div>
+        <section className="workspace-panel" aria-label="产物工作区">
           <div className="workspace-panel-header">
             <div>
-              <span className="eyebrow">RESEARCH ARTIFACTS</span>
-              <h2>
-                {/\.tex$/i.test(file)
-                  ? '论文编辑器'
-                  : selectedFile && file !== defaultFile
-                    ? '文件工作区'
-                    : phase?.label || '研究产物'}
-              </h2>
+              <FolderOpenOutlined />
+              <h2>工作区</h2>
+              <span className="workspace-file-count">{fileList.length} 个文件</span>
             </div>
-            <Tag bordered={false}>
-              {p.state.mode === 'expert'
-                ? '专家模式'
-                : p.state.mode === 'auto'
-                  ? '自动模式'
-                  : '待配置'}
-            </Tag>
+            <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
+              <Button
+                type="text"
+                size="small"
+                aria-label={maximized ? '恢复分栏' : '展开工作区'}
+                icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                onClick={() => setMaximized(!maximized)}
+              />
+            </Tooltip>
           </div>
           <Tabs
             activeKey={tab}
@@ -362,42 +340,120 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
             items={[
               {
                 key: 'report',
-                label: '文件预览',
+                label: '文件',
                 children: (
                   <>
                     <div className="file-selector">
-                      {file !== 'paper/main.tex' &&
-                        fileList.some((f) => f.path === 'paper/main.tex') && (
+                      {paperFocus && (
+                        <Dropdown
+                          trigger={['click']}
+                          menu={{
+                            items: [
+                              { key: 'stages', label: '阶段产物' },
+                              { key: 'figures', label: '图片画廊' },
+                            ],
+                            onClick: ({ key }) => setTab(key),
+                          }}
+                        >
                           <Button
+                            type="text"
+                            size="small"
+                            aria-label="文件与产物"
+                            title="文件与产物"
+                            icon={<FolderOpenOutlined />}
+                          />
+                        </Dropdown>
+                      )}
+                      <ArtifactDirectory
+                        files={fileList}
+                        value={file}
+                        onChange={(path) => openFile(path)}
+                        truncated={files.data?.truncated}
+                      />
+                      {paperFocus && (
+                        <Button
+                          type="text"
+                          size="small"
+                          aria-label={maximized ? '恢复分栏' : '展开工作区'}
+                          title={maximized ? '恢复分栏' : '展开工作区'}
+                          icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                          onClick={() => setMaximized(!maximized)}
+                        />
+                      )}
+                      {file !== 'paper/main.tex' &&
+                        fileList.some((entry) => entry.path === 'paper/main.tex') && (
+                          <Button
+                            size="small"
                             className="paper-editor-shortcut"
-                            onClick={() => selectFile('paper/main.tex')}
+                            onClick={() => openFile('paper/main.tex')}
                           >
-                            打开论文编辑器
+                            论文编辑器
                           </Button>
                         )}
-                      <Select
-                        showSearch
-                        allowClear
-                        optionFilterProp="label"
-                        value={file || undefined}
-                        placeholder="选择项目文件查看"
-                        onChange={(v) => selectFile(v || '')}
-                        options={fileList.map((f) => ({ value: f.path, label: f.path }))}
-                        suffixIcon={<FileOutlined />}
-                        style={{ width: '100%' }}
-                      />
                     </div>
+                    {files.isError && (
+                      <Alert
+                        type="warning"
+                        message="文件目录加载失败"
+                        action={
+                          <Button size="small" onClick={() => files.refetch()}>
+                            重试
+                          </Button>
+                        }
+                      />
+                    )}
                     <Artifact
                       key={`${id}:${file}`}
                       projectId={id}
                       path={file}
                       running={running}
                       files={fileList}
-                      onDirtyChange={(v) => {
-                        dirtyRef.current = v;
+                      onDirtyChange={(dirty) => {
+                        dirtyRef.current = dirty;
                       }}
                     />
                   </>
+                ),
+              },
+              {
+                key: 'stages',
+                label: '阶段产物',
+                children: (
+                  <div className="stage-catalog">
+                    <div className="catalog-heading">
+                      <h3>研究过程中的每一份产物</h3>
+                      <span>
+                        {completedNodes.size}/{nodes.length} 阶段有执行记录
+                      </span>
+                    </div>
+                    {nodes.map((node, index) => {
+                      const path = reports[node.id];
+                      const exists = fileList.some((entry) => entry.path === path);
+                      return (
+                        <button
+                          key={node.id}
+                          className={`stage-card ${p.state.current_node === node.id ? 'current' : ''}`}
+                          disabled={!exists}
+                          onClick={() => {
+                            openFile(path, node.id);
+                          }}
+                        >
+                          <span className="stage-index">{String(index + 1).padStart(2, '0')}</span>
+                          <span>
+                            <strong>{node.label}</strong>
+                            <small>
+                              {exists
+                                ? path
+                                : p.state.current_node === node.id && running
+                                  ? '正在生成产物'
+                                  : '尚未生成产物'}
+                            </small>
+                          </span>
+                          <span className="stage-card-state">{exists ? '打开 ↗' : '待生成'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 ),
               },
               {
@@ -405,299 +461,61 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
                 label: '图片画廊',
                 children: <FigureGallery projectId={id} files={fileList} />,
               },
-              {
-                key: 'files',
-                label: `项目文件${fileList.length ? ` · ${fileList.length}` : ''}`,
-                children: (
-                  <div className="files-tab">
-                    {files.data?.truncated && (
-                      <Alert type="warning" message="仅显示前 5000 个文件" />
-                    )}
-                    <Input.Search
-                      placeholder="搜索文件路径"
-                      onChange={(e) => {
-                        const v = e.target.value.toLowerCase();
-                        document.querySelectorAll<HTMLElement>('.file-list-row').forEach((el) => {
-                          el.hidden = !el.dataset.path?.toLowerCase().includes(v);
-                        });
-                      }}
-                    />
-                    <List
-                      dataSource={fileList}
-                      locale={{ emptyText: '暂无研究文件' }}
-                      renderItem={(f) => (
-                        <List.Item
-                          className="file-list-row"
-                          data-path={f.path}
-                          actions={[
-                            <span key="size" className="muted">
-                              {f.size < 1024 ? `${f.size} B` : `${(f.size / 1024).toFixed(1)} KB`}
-                            </span>,
-                          ]}
-                        >
-                          <button
-                            className="file-row-button"
-                            aria-label={f.path}
-                            onClick={() => {
-                              selectFile(f.path);
-                              setTab('report');
-                            }}
-                          >
-                            <FileOutlined />
-                            {f.path}
-                          </button>
-                        </List.Item>
-                      )}
-                    />
-                  </div>
-                ),
-              },
-              {
-                key: 'experiments',
-                label: '实验任务',
-                children: (
-                  <Experiments
-                    projectId={id}
-                    hasManifest={fileList.some((f) => f.path === 'experiments/manifest.json')}
-                    running={running}
-                  />
-                ),
-              },
-              {
-                key: 'history',
-                label: '运行历史',
-                children: (
-                  <div className="history-tab">
-                    {p.runs.length ? (
-                      p.runs.map((r) => (
-                        <div className="history-row" key={r.id}>
-                          <span className="history-icon">
-                            <ClockCircleOutlined />
-                          </span>
-                          <div>
-                            <strong>
-                              {r.options.action === 'review'
-                                ? '专家审阅与继续'
-                                : r.options.action === 'resume'
-                                  ? '恢复研究'
-                                  : '启动研究'}
-                            </strong>
-                            <p>
-                              {formatDate(r.created_at)} <span>→</span>{' '}
-                              {r.finished_at ? formatDate(r.finished_at) : '执行中'}
-                            </p>
-                            {r.error && <small className="error-text">{r.error}</small>}
-                          </div>
-                          <Status value={r.status} />
-                        </div>
-                      ))
-                    ) : (
-                      <Empty description="暂无运行记录" />
-                    )}
-                  </div>
-                ),
-              },
             ]}
           />
+          <footer className="workspace-status">
+            <FileTextOutlined />
+            <span>{phase?.label || '研究产物'}</span>
+            <span>
+              {p.state.mode === 'expert'
+                ? '专家模式'
+                : p.state.mode === 'auto'
+                  ? '自动模式'
+                  : '待配置'}
+            </span>
+          </footer>
         </section>
       </div>
       <Drawer
         title="运行动态"
         open={activityOpen}
         onClose={() => setActivityOpen(false)}
-        width={460}
+        width={520}
         className="workbench-drawer"
       >
-        <aside className="activity-panel">
-          <div className="panel-caption">
-            运行动态
-            <span className={`connection-dot ${running ? 'online' : ''}`} />
-          </div>
-          <div className="activity-current">
-            <span className="eyebrow">CURRENT ACTIVITY</span>
-            <h3>
-              {running
-                ? nodes.find((n) => n.id === p.state.current_node)?.label || '正在启动'
-                : checkpoint
-                  ? '等待你的研究判断'
-                  : p.status === 'idle'
-                    ? '准备开始探索'
-                    : statusLabels[p.status]}
-            </h3>
-            <p>
-              {running
-                ? String(p.progress.tool || p.progress.phase || '研究引擎正在执行任务')
-                : checkpoint
-                  ? '审阅阶段产物，确认方向后继续。'
-                  : '运行记录和工具活动将显示在这里。'}
-            </p>
-            {running && (
-              <div className="live-indicator">
-                <span />
-                <span />
-                <span />
-              </div>
-            )}
-          </div>
-          <div className="activity-section-title">
-            执行日志{' '}
-            <Button
-              type="text"
-              size="small"
-              aria-label="刷新日志"
-              icon={<ReloadOutlined />}
-              onClick={() => logs.refetch()}
-            />
-          </div>
-          {logs.data?.content ? (
-            <pre className="live-log">{logs.data.content}</pre>
-          ) : (
-            <div className="quiet-state">
-              <ClockCircleOutlined />
-              <span>暂无本工作台的运行日志</span>
-            </div>
-          )}
-          <div className="activity-bottom">
-            <CheckCircleFilled /> 运行状态持续保存至本机
-          </div>
-        </aside>
+        <p className="muted">执行事件展示在研究对话中；这里保留原始运行日志。</p>
+        {(p.runs[0]?.error || p.state.error) && (
+          <Alert
+            type="error"
+            message="上次运行需要处理"
+            description={p.runs[0]?.error || p.state.error}
+          />
+        )}
+        {logs.isError ? (
+          <Alert
+            type="error"
+            message={logs.error.message}
+            action={<Button onClick={() => logs.refetch()}>重试</Button>}
+          />
+        ) : logs.data?.content ? (
+          <pre className="live-log">{logs.data.content}</pre>
+        ) : (
+          <Empty description="暂无本工作台的运行日志" />
+        )}
       </Drawer>
-      {checkpoint && (
-        <Drawer
-          title="专家审阅"
-          open={reviewOpen}
-          onClose={() => setReviewOpen(false)}
-          width={560}
-          className="workbench-drawer"
-        >
-          <section className="review-panel" id="expert-review">
-            <div className="review-heading">
-              <span className="review-icon">✦</span>
-              <div>
-                <span className="eyebrow">HUMAN IN THE LOOP</span>
-                <h2>这一阶段，听听你的判断</h2>
-              </div>
-              <Tag color="gold" bordered={false}>
-                等待审阅
-              </Tag>
-            </div>
-            <p className="review-summary">{checkpoint.summary}</p>
-            <ol className="review-questions">
-              {checkpoint.questions?.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
-            </ol>
-            <div className="review-input-row">
-              <Input.TextArea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                autoSize={{ minRows: 3, maxRows: 8 }}
-                maxLength={20000}
-                placeholder="输入你的回答或修改意见；留空表示接受当前产物并继续。"
-              />
-              <Button
-                type="primary"
-                size="large"
-                loading={run.isPending}
-                disabled={running}
-                icon={<ArrowRightOutlined />}
-                onClick={() => {
-                  if (dirtyRef.current) {
-                    message.warning('请先保存报告修改，再提交审阅');
-                    return;
-                  }
-                  modal.confirm({
-                    title: answer.trim() ? '提交意见并继续研究？' : '确认当前产物并继续？',
-                    content: answer.trim()
-                      ? '系统将按意见修订当前节点产物，再进入后续节点。'
-                      : '系统将校验当前产物并进入后续节点，可能调用模型或启动实验。',
-                    onOk: () =>
-                      run.mutateAsync({
-                        action: 'review',
-                        answer,
-                        checkpoint_token: p.checkpoint_token,
-                      }),
-                  });
-                }}
-              >
-                {answer.trim() ? '提交意见并继续' : '确认并继续'}
-              </Button>
-            </div>
-          </section>
-        </Drawer>
-      )}
       <RunDialog
         open={runOpen}
         onClose={() => setRunOpen(false)}
-        onRun={(values) => run.mutate(values)}
+        onRun={(values) => {
+          if (dirtyRef.current) {
+            message.warning('请先保存产物修改，再启动研究');
+            return;
+          }
+          run.mutate(values);
+        }}
         pending={run.isPending}
         project={p}
         nodes={nodes}
-      />
-    </div>
-  );
-}
-function Experiments({
-  projectId,
-  hasManifest,
-  running,
-}: {
-  projectId: string;
-  hasManifest: boolean;
-  running: boolean;
-}) {
-  const manifest = useQuery({
-    queryKey: ['manifest', projectId],
-    queryFn: () => api.file(projectId, 'experiments/manifest.json'),
-    enabled: hasManifest,
-    refetchInterval: running ? 5000 : false,
-  });
-  if (!hasManifest)
-    return (
-      <div className="tab-empty">
-        <Empty description="实验规划完成后，这里将展示任务与依赖。" />
-      </div>
-    );
-  if (manifest.isPending) return <Spin />;
-  if (manifest.isError) return <Alert type="error" message={(manifest.error as Error).message} />;
-  let jobs: Record<string, unknown>[];
-  try {
-    jobs = JSON.parse(manifest.data?.content || '{}').jobs || [];
-  } catch {
-    return <Alert type="warning" message="实验清单暂时无法解析，请检查 manifest.json。" />;
-  }
-  return (
-    <div className="experiments-tab">
-      <Alert
-        type="info"
-        showIcon
-        message="下表展示实验任务定义。任务完成情况请结合执行日志、tracker 和实际回执确认。"
-      />
-      <Table
-        size="small"
-        rowKey={(row) => String(row.id)}
-        dataSource={jobs}
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: 550 }}
-        columns={[
-          { title: '任务', dataIndex: 'id', render: (value) => <code>{String(value)}</code> },
-          {
-            title: '依赖',
-            dataIndex: 'depends_on',
-            render: (value) =>
-              Array.isArray(value) && value.length ? value.join(', ') : '独立任务',
-          },
-          {
-            title: '超时',
-            dataIndex: 'timeout_seconds',
-            render: (value) => (value ? `${value} 秒` : '—'),
-          },
-          {
-            title: '预期产物',
-            dataIndex: 'expected_outputs',
-            render: (value) => (Array.isArray(value) ? `${value.length} 项` : '—'),
-          },
-        ]}
       />
     </div>
   );

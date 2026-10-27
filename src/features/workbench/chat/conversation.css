@@ -1,0 +1,354 @@
+/* Adapted from StoraGent MessageBubble, MessageInputComponent and artifact cards.
+   Copyright (c) 2026 StoraGent Team (MIT). See shared/file-preview/STORAGENT-LICENSE.txt. */
+.conversation-panel {
+  --chat-ink: #373737;
+  --chat-muted: #909090;
+  --chat-line: #e8e8e8;
+  --chat-fill: #f5f5f5;
+  --chat-accent: #595959;
+}
+.conversation-panel .conversation-heading {
+  border-bottom: 1px solid #f1f1f1;
+  padding: 16px 24px;
+}
+.conversation-panel .conversation-messages {
+  padding-top: 26px;
+  padding-bottom: 32px;
+}
+.conversation-panel .chat-message {
+  color: var(--chat-ink);
+  margin-bottom: 28px;
+  font-size: 14px;
+  line-height: 1.85;
+}
+.conversation-panel .message-role {
+  color: var(--chat-ink);
+  font-size: 11px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.conversation-panel .agent-message > .message-role > .agent-symbol {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: #f1f1f1;
+  border: 1px solid #e7e7e7;
+  border-radius: 9px;
+  font-size: 18px;
+  color: var(--chat-accent);
+}
+.conversation-panel .message-role small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.conversation-panel .user-message {
+  width: fit-content;
+  max-width: 92%;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.conversation-panel .user-message .message-role {
+  justify-content: flex-end;
+  padding-inline: 8px;
+  color: var(--chat-muted);
+  margin-bottom: 8px;
+}
+.conversation-panel .user-message .message-role time {
+  margin-left: 8px;
+}
+.conversation-panel .user-message > p {
+  background: var(--chat-fill);
+  border: 1px solid var(--chat-line);
+  border-radius: 20px;
+  padding: 12px 16px;
+  color: var(--chat-ink);
+  font-size: 14px;
+  box-shadow: none;
+}
+.conversation-panel .message-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+}
+.conversation-panel .user-message .message-actions {
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+.conversation-panel .message-actions .ant-btn {
+  color: #9d9d9d;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+.conversation-panel .message-actions .ant-btn:hover {
+  background: var(--chat-fill);
+  color: var(--chat-accent);
+}
+.conversation-panel .chat-markdown {
+  font-size: 14px;
+  line-height: 1.9;
+}
+.conversation-panel .chat-markdown p {
+  white-space: normal;
+}
+.conversation-panel .chat-markdown pre {
+  border: 1px solid var(--chat-line);
+  border-radius: 12px;
+  background: #f8f8f8;
+  font: 12px/1.7 monospace;
+}
+.conversation-panel .chat-markdown blockquote {
+  margin: 14px 0;
+  padding: 1px 14px;
+  border-left: 3px solid #c6c6c6;
+  color: #7c7c7c;
+}
+.conversation-panel .chat-markdown a {
+  color: var(--chat-accent);
+  text-underline-offset: 3px;
+}
+.conversation-panel .chat-artifacts {
+  gap: 12px;
+}
+.conversation-panel .chat-deliverable {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--chat-line);
+  border-radius: 14px;
+  background: #fff;
+  margin-top: 12px;
+  overflow: hidden;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
+}
+.conversation-panel .chat-artifacts .chat-deliverable {
+  margin-top: 0;
+}
+.conversation-panel .chat-deliverable:hover {
+  border-color: #c2c2c2;
+  box-shadow: 0 3px 12px #3d3d3d08;
+}
+.conversation-panel .chat-deliverable-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #838383;
+  padding: 10px 14px 0;
+}
+.conversation-panel .chat-deliverable-heading > span:last-child {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  color: #9f9f9f;
+}
+.deliverable-dot {
+  width: 5px;
+  height: 5px;
+  background: #919191;
+  border-radius: 50%;
+}
+.conversation-panel .chat-artifact {
+  border: 0;
+  border-radius: 0;
+  padding: 12px 14px 14px;
+  gap: 12px;
+  background: transparent;
+  min-width: 0;
+}
+.conversation-panel .chat-artifact:hover {
+  background: #fafafa;
+}
+.conversation-panel .deliverable-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 48px;
+  flex: 0 0 42px;
+  border: 1px solid #e5e5e5;
+  border-radius: 9px;
+  background: #f3f3f3;
+  color: #8a8a8a;
+  font-size: 21px;
+}
+.conversation-panel .chat-deliverable[data-kind='pdf'] .deliverable-icon {
+  background: #faf0e9;
+  border-color: #eeded0;
+  color: #b67d5b;
+}
+.conversation-panel .chat-deliverable[data-kind='tex'] .deliverable-icon {
+  background: #edf1f7;
+  border-color: #dbe3ee;
+  color: #7287a8;
+}
+.conversation-panel .chat-artifact .deliverable-info {
+  min-width: 0;
+  flex: 1;
+}
+.conversation-panel .deliverable-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #424242;
+}
+.conversation-panel .deliverable-info small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 10px/1.6 monospace;
+  color: #989898;
+  margin-top: 4px;
+}
+.conversation-panel .chat-artifact > .deliverable-arrow {
+  transform: rotate(45deg);
+  font-size: 13px;
+  color: #a5a5a5;
+  flex: 0 0 auto;
+}
+.conversation-panel .chat-deliverable-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 10px 3px 14px;
+  border-top: 1px solid #f1f1f1;
+  background: #fbfbfb;
+  color: #989898;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.conversation-panel .chat-deliverable-footer .ant-btn {
+  color: #8a8a8a;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.conversation-panel .checkpoint-message {
+  border: 1px solid var(--chat-line);
+  padding: 18px;
+  border-radius: 16px;
+  background: #fcfcfc;
+}
+.conversation-panel .review-heading h3 {
+  font-size: 17px;
+  font-weight: 500;
+}
+.conversation-panel .review-question {
+  background: #fff;
+  padding: 14px;
+  border-radius: 12px;
+}
+.conversation-panel .review-question label {
+  font-size: 13px;
+}
+.conversation-panel .tool-activity {
+  background: #fbfbfb;
+  border-color: #ebebeb;
+  border-radius: 12px;
+}
+.conversation-panel .tool-activity summary {
+  font-size: 11px;
+  padding: 10px 12px;
+}
+.conversation-panel .tool-activity[open] {
+  background: #fff;
+}
+.conversation-panel .execution-step {
+  padding: 7px 4px;
+}
+.conversation-panel .composer-area {
+  padding-top: 12px;
+  background: linear-gradient(#fff0, #fff 12px);
+}
+.conversation-panel .chat-composer {
+  border: 1px solid #d2d2d2;
+  border-radius: 20px;
+  padding: 14px 12px 10px 16px;
+  box-shadow: none;
+  transition: border-color 150ms;
+}
+.conversation-panel .chat-composer:has(textarea:focus-visible) {
+  outline: 2px solid #868686;
+  outline-offset: -1px;
+}
+.conversation-panel .chat-composer .ant-input {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.conversation-panel .chat-composer .ant-input::placeholder {
+  color: #a6a6a6;
+}
+.conversation-panel .composer-tools {
+  margin-top: 14px;
+}
+.conversation-panel .composer-tools .ant-select-selector {
+  border-radius: 12px;
+}
+.conversation-panel .composer-tools > .ant-btn-primary {
+  min-height: 32px;
+  box-shadow: none;
+}
+.conversation-panel .composer-hint {
+  color: #a2a2a2;
+  font-size: 10px;
+}
+.conversation-panel .conversation-welcome {
+  padding: 38px 4px;
+}
+.conversation-panel .conversation-welcome > .agent-symbol {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid #e3e3e3;
+  border-radius: 18px;
+  background: #f4f4f4;
+}
+.conversation-panel .conversation-welcome h2 {
+  font-size: 25px;
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+}
+@media (max-width: 700px) {
+  .conversation-panel .conversation-heading {
+    padding: 12px 16px;
+  }
+  .conversation-panel .conversation-messages {
+    padding: 20px 16px 28px;
+  }
+  .conversation-panel .user-message {
+    max-width: 95%;
+  }
+  .conversation-panel .message-actions .ant-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .conversation-panel .checkpoint-message {
+    padding: 14px;
+  }
+  .conversation-panel .review-question {
+    padding: 12px;
+  }
+  .conversation-panel .review-question label {
+    gap: 8px;
+  }
+  .conversation-panel .composer-area {
+    padding: 8px 12px 10px;
+  }
+  .conversation-panel .chat-composer {
+    padding: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .conversation-panel .chat-deliverable,
+  .conversation-panel .chat-composer {
+    transition: none;
+  }
+}

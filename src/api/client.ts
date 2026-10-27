@@ -15,6 +15,53 @@ export type FileContent = {
 };
 export type RunInput = import('./schema').components['schemas']['RunCreate'];
 export type Health = Schemas['HealthView'];
+export type ActivityEvent = {
+  id: number;
+  project_id: string;
+  run_id: string | null;
+  kind: string;
+  data: Record<string, unknown>;
+  created_at: string;
+};
+export type ActivityPage = { events: ActivityEvent[]; has_more: boolean };
+export type LibraryKind = 'paradigms' | 'battery';
+export type LibraryEntry = {
+  path: string;
+  title: string;
+  category: string;
+  excerpt: string;
+  modified: number;
+};
+export type LibraryIndex = {
+  available: boolean;
+  items: LibraryEntry[];
+  categories: { id: string; count: number }[];
+  total: number;
+  matched: number;
+  truncated: boolean;
+};
+export type ParadigmGraph = {
+  available: boolean;
+  truncated: boolean;
+  nodes: (LibraryEntry & { id: string; tags: string[] })[];
+  edges: { source: string; target: string; type: string; evidence: string }[];
+};
+export type LibraryFigure = {
+  id: string;
+  image_path: string;
+  paper_id: string;
+  paper_title: string;
+  paper_path: string | null;
+  label: string;
+  page: number | null;
+  caption: string;
+};
+export type LibraryFigures = {
+  available: boolean;
+  items: LibraryFigure[];
+  total: number;
+  truncated: boolean;
+};
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -44,13 +91,31 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 export const api = {
+  paradigmGraph: () => request<ParadigmGraph>('/libraries/paradigms/graph'),
+  paradigmFigures: () => request<LibraryFigures>('/libraries/paradigms/figures'),
+  library: (kind: LibraryKind, q = '', category = '') =>
+    request<LibraryIndex>(`/libraries/${kind}?${new URLSearchParams({ q, category })}`),
+  libraryDocument: (kind: LibraryKind, path: string) =>
+    request<LibraryEntry & { content: string }>(
+      `/libraries/${kind}/document?${new URLSearchParams({ path })}`,
+    ),
+  libraryAsset: (kind: LibraryKind, path: string) =>
+    `/api/libraries/${kind}/asset?${new URLSearchParams({ path })}`,
   health: () => request<Health>('/health'),
   projects: () => request<Project[]>('/projects'),
   project: (id: string) => request<Project>(`/projects/${id}`),
   create: (body: { name: string; path?: string }) =>
     request<Project>('/projects', { method: 'POST', body: JSON.stringify(body) }),
   run: (id: string, body: RunInput) =>
-    request<{ id: string }>(`/projects/${id}/runs`, { method: 'POST', body: JSON.stringify(body) }),
+    request<{ id: string } | { intent: 'chat' | 'clarify'; reply: string }>(
+      `/projects/${id}/runs`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  message: (id: string, body: { prompt: string; mode: 'auto' | 'expert' }) =>
+    request<{ id: string } | { intent: 'chat'; reply: string }>(`/projects/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   stop: (id: string) => request(`/projects/${id}/stop`, { method: 'POST' }),
   files: (id: string) =>
     request<{ files: ProjectFile[]; truncated: boolean }>(`/projects/${id}/files`),
@@ -62,6 +127,12 @@ export const api = {
       body: JSON.stringify({ content, sha256 }),
     }),
   log: (id: string) => request<{ content: string }>(`/projects/${id}/log`),
+  activity: (id: string, cursor: { before?: number; after?: number } = {}) =>
+    request<ActivityPage>(
+      `/projects/${id}/activity?${new URLSearchParams(
+        Object.entries(cursor).map(([key, value]) => [key, String(value)]),
+      )}`,
+    ),
   download: (id: string, path: string) =>
     `/api/projects/${id}/download?${new URLSearchParams({ path })}`,
 };

@@ -42,7 +42,7 @@ export function RunDialog({
         initialValues={{
           prompt: '',
           mode: project.state.mode || 'expert',
-          max_tool_rounds: 30,
+          max_tool_rounds: 100,
           timeout: 600,
         }}
         onFinish={(values) =>
