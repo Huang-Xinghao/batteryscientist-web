@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Image, Segmented, Select, Skeleton, Space, Spin } from 'antd';
@@ -13,7 +13,62 @@ import Editor from './SafeEditor';
 import { PaneDivider } from '../../shared/file-preview/PaneDivider';
 import { isImagePath } from '../../shared/file-preview/display';
 import { siblingImages } from '../../shared/file-preview/siblingImages';
-export function Artifact({
+const IdeaCanvas = lazy(() => import('./idea-canvas/IdeaCanvas'));
+
+export function Artifact(props: Parameters<typeof FileArtifact>[0] & { reviewRequest?: number }) {
+  const [canvas, setCanvas] = useState(true);
+  useEffect(() => {
+    if (props.reviewRequest !== undefined) setCanvas(true);
+  }, [props.reviewRequest]);
+  const dirty = useRef(false);
+  const { message } = App.useApp();
+  if (props.path !== 'refine-logs/FINAL_PROPOSAL.md') return <FileArtifact {...props} />;
+  const viewSwitch = (
+    <Button
+      size="small"
+      onClick={() => {
+        if (dirty.current) {
+          message.info('请先保存或撤销当前修改，再切换视图');
+          return;
+        }
+        window.speechSynthesis?.cancel();
+        setCanvas(!canvas);
+      }}
+    >
+      {canvas ? '原提案' : '返回方案审阅'}
+    </Button>
+  );
+  return (
+    <div className="idea-artifact-host">
+      {!canvas && <div className="idea-view-switch">{viewSwitch}</div>}
+      <div className="idea-view-content">
+        {canvas ? (
+          <Suspense fallback={<Spin className="editor-loading" />}>
+            <IdeaCanvas
+              viewSwitch={viewSwitch}
+              projectId={props.projectId}
+              running={props.running}
+              onDirtyChange={(value) => {
+                dirty.current = value;
+                props.onDirtyChange(value);
+              }}
+            />
+          </Suspense>
+        ) : (
+          <FileArtifact
+            {...props}
+            onDirtyChange={(value) => {
+              dirty.current = value;
+              props.onDirtyChange(value);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FileArtifact({
   projectId,
   path,
   running,

@@ -141,6 +141,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/idea-canvas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Canvas */
+        get: operations["read_canvas_api_projects__project_id__idea_canvas_get"];
+        /** Save Canvas */
+        put: operations["save_canvas_api_projects__project_id__idea_canvas_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -354,6 +372,45 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CanvasDraft */
+        CanvasDraft: {
+            /**
+             * Version
+             * @default 1
+             */
+            version?: number;
+            /** Sourcehash */
+            sourceHash: string;
+            /** Nodes */
+            nodes: components["schemas"]["CanvasNode"][];
+            /** Edges */
+            edges: components["schemas"]["CanvasEdge"][];
+            /** Changes */
+            changes?: string[];
+            review?: components["schemas"]["ProposalReview"] | null;
+        };
+        /** CanvasEdge */
+        CanvasEdge: {
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        };
+        /** CanvasNode */
+        CanvasNode: {
+            /** Id */
+            id: string;
+            position: components["schemas"]["Position"];
+            data: components["schemas"]["ModuleData"];
+        };
+        /** CanvasSave */
+        CanvasSave: {
+            /** Sha256 */
+            sha256: string;
+            draft: components["schemas"]["CanvasDraft"];
+        };
         /** CheckpointView */
         CheckpointView: {
             /** Node */
@@ -369,6 +426,18 @@ export interface components {
             report: string;
             /** Files */
             files?: string[];
+            /** Brief */
+            brief?: {
+                [key: string]: string;
+            } | null;
+            /** Previous Brief */
+            previous_brief?: {
+                [key: string]: string;
+            } | null;
+            /** Decision Options */
+            decision_options?: string[][] | null;
+            /** Report Sha256 */
+            report_sha256?: string | null;
         };
         /** FileEdit */
         FileEdit: {
@@ -422,12 +491,76 @@ export interface components {
             /** Model */
             model?: string | null;
         };
+        /** ModuleData */
+        ModuleData: {
+            /** Title */
+            title: string;
+            /**
+             * Purpose
+             * @default
+             */
+            purpose?: string;
+            /**
+             * Input
+             * @default
+             */
+            input?: string;
+            /**
+             * Steps
+             * @default
+             */
+            steps?: string;
+            /**
+             * Output
+             * @default
+             */
+            output?: string;
+            /**
+             * Parameters
+             * @default
+             */
+            parameters?: string;
+            /**
+             * Limits
+             * @default
+             */
+            limits?: string;
+            /**
+             * Example
+             * @default
+             */
+            example?: string;
+            /** Sectionids */
+            sectionIds?: string[];
+            /**
+             * Sourcecontent
+             * @default
+             */
+            sourceContent?: string;
+            /**
+             * Disabled
+             * @default false
+             */
+            disabled?: boolean;
+            /**
+             * Needsreview
+             * @default false
+             */
+            needsReview?: boolean;
+        };
         /** NodeView */
         NodeView: {
             /** Id */
             id: string;
             /** Label */
             label: string;
+        };
+        /** Position */
+        Position: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -458,6 +591,37 @@ export interface components {
             /** Checkpoint Token */
             checkpoint_token: string;
         };
+        /** ProposalReview */
+        ProposalReview: {
+            /** Sections */
+            sections: components["schemas"]["ReviewSection"][];
+            /**
+             * Feedback
+             * @default
+             */
+            feedback?: string;
+        };
+        /** ReviewSection */
+        ReviewSection: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Details */
+            details: string;
+            /**
+             * Focus
+             * @default false
+             */
+            focus?: boolean;
+            /**
+             * Edited
+             * @default false
+             */
+            edited?: boolean;
+        };
         /** RevisionTask */
         RevisionTask: {
             /**
@@ -484,7 +648,7 @@ export interface components {
              * @default start
              * @enum {string}
              */
-            action?: "start" | "resume" | "review" | "revise";
+            action?: "start" | "resume" | "review" | "revise" | "proposal_revise" | "proposal_approve";
             /**
              * Prompt
              * @default
@@ -525,6 +689,8 @@ export interface components {
             answer?: string;
             /** Checkpoint Token */
             checkpoint_token?: string | null;
+            /** Proposal Sha256 */
+            proposal_sha256?: string | null;
             node_task?: components["schemas"]["RevisionTask"] | null;
         };
         /** RunView */
@@ -797,6 +963,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    read_canvas_api_projects__project_id__idea_canvas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_canvas_api_projects__project_id__idea_canvas_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CanvasSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

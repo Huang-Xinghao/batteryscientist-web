@@ -41,6 +41,7 @@ export function Conversation({
   loadingOlder,
   loadOlder,
   onOpen,
+  onReviewProposal,
   onSend,
   onStop,
   onSettings,
@@ -56,6 +57,7 @@ export function Conversation({
   loadingOlder: boolean;
   loadOlder: () => Promise<void>;
   onOpen: (path: string) => void;
+  onReviewProposal: () => void;
   onSend: (text: string, mode: 'auto' | 'expert') => Promise<void>;
   onStop: () => void;
   onSettings: () => void;
@@ -77,6 +79,7 @@ export function Conversation({
   const running = active(project.status);
   const checkpoint =
     project.status === 'awaiting_user' ? project.state.expert_checkpoint : undefined;
+  const reviewingProposal = checkpoint?.node === 'refine' && project.state.mode === 'expert';
   const questions = checkpoint?.questions || [];
   const checkpointKey = JSON.stringify([
     project.runs[0]?.id,
@@ -463,50 +466,62 @@ export function Conversation({
                 <span className="agent-symbol">✦</span> Paper Agent <small>等待你的判断</small>
               </div>
               <div className="review-heading">
-                <h3>一起确定下一步</h3>
-                {questions.length > 0 && (
+                <h3>{reviewingProposal ? '请审阅研究方案' : '一起确定下一步'}</h3>
+                {!reviewingProposal && questions.length > 0 && (
                   <span>
                     已回答 {answered} / {questions.length}
                   </span>
                 )}
               </div>
               <p className="review-summary">{checkpoint.summary}</p>
-              <div className="review-question-list">
-                {questions.map((question, index) => (
-                  <div
-                    className={`review-question ${answers[index]?.trim() ? 'answered' : ''}`}
-                    key={index}
-                  >
-                    <label htmlFor={`review-answer-${index}`}>
-                      <span className="review-question-number">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span>{question}</span>
-                      {answers[index]?.trim() && <CheckOutlined className="review-answer-check" />}
-                    </label>
-                    <Input.TextArea
-                      id={`review-answer-${index}`}
-                      placeholder="写下你的想法、选择或具体要求…"
-                      value={answers[index] || ''}
-                      onChange={(event) => {
-                        const values = [...answers];
-                        values[index] = event.target.value;
-                        setAnswerDraft({ key: checkpointKey, values });
-                      }}
-                      autoSize={{ minRows: 3, maxRows: 8 }}
-                      maxLength={20000}
-                      disabled={running || pending}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                          event.preventDefault();
-                          void send();
-                        }
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-              {questions.length > 0 && (
+              {reviewingProposal ? (
+                <>
+                  <p>
+                    在方案总览中集中修改，提交 Agent
+                    统一修订并检查关联影响；满意后再批准进入实验规划。
+                  </p>
+                  <Button onClick={onReviewProposal}>打开方案审阅</Button>
+                </>
+              ) : (
+                <div className="review-question-list">
+                  {questions.map((question, index) => (
+                    <div
+                      className={`review-question ${answers[index]?.trim() ? 'answered' : ''}`}
+                      key={index}
+                    >
+                      <label htmlFor={`review-answer-${index}`}>
+                        <span className="review-question-number">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span>{question}</span>
+                        {answers[index]?.trim() && (
+                          <CheckOutlined className="review-answer-check" />
+                        )}
+                      </label>
+                      <Input.TextArea
+                        id={`review-answer-${index}`}
+                        placeholder="写下你的想法、选择或具体要求…"
+                        value={answers[index] || ''}
+                        onChange={(event) => {
+                          const values = [...answers];
+                          values[index] = event.target.value;
+                          setAnswerDraft({ key: checkpointKey, values });
+                        }}
+                        autoSize={{ minRows: 3, maxRows: 8 }}
+                        maxLength={20000}
+                        disabled={running || pending}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                            event.preventDefault();
+                            void send();
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!reviewingProposal && questions.length > 0 && (
                 <p className="review-note">
                   可只回答你关心的问题，留空表示接受当前建议。填写后在下方统一提交。
                 </p>
@@ -559,101 +574,119 @@ export function Conversation({
         />
       )}
       <div className="composer-area">
-        {checkpoint && (
-          <div className="review-composer-label">
-            <span>
-              补充意见 <small>选填</small>
-            </span>
-            <span>{answered ? `${answered} 个回答待提交` : '审阅后可直接确认'}</span>
-          </div>
-        )}
-        {tooLong && (
-          <Alert type="warning" message="回答与补充意见合计不能超过 20,000 字，请精简后提交。" />
-        )}
-        <div className={`chat-composer ${pending ? 'is-submitting' : ''}`}>
-          <Input.TextArea
-            ref={input}
-            aria-label={checkpoint ? '专家反馈' : '研究指令'}
-            placeholder={
-              checkpoint
-                ? '输入你的回答或修改意见；留空表示接受当前产物并继续。'
-                : project.state.task_prompt
-                  ? '提问、修改指定产物，或继续中断的任务…'
-                  : '描述你的研究问题、已有资料和预期成果…'
-            }
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            autoSize={{ minRows: 2, maxRows: 6 }}
-            maxLength={20000}
-            disabled={pending}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                event.preventDefault();
-                void send();
-              }
-            }}
-          />
-          <div className="composer-tools">
-            <div>
-              <Select
-                aria-label="对话协作方式"
-                size="small"
-                value={mode}
-                disabled={running || !!checkpoint}
-                onChange={setMode}
-                options={[
-                  { value: 'expert', label: '专家模式' },
-                  { value: 'auto', label: '自动模式' },
-                ]}
-              />
-              <Tooltip title="起始节点、模型和运行参数">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<SettingOutlined />}
-                  aria-label="协作方式设置"
-                  disabled={running || !!checkpoint}
-                  onClick={onSettings}
-                />
-              </Tooltip>
-            </div>
-            {running && (
-              <Button
-                size="small"
-                danger
-                icon={<StopOutlined />}
-                disabled={project.status === 'external_running'}
-                onClick={onStop}
-              >
-                停止运行
-              </Button>
+        {reviewingProposal ? (
+          <>
+            <Button type="primary" block onClick={onReviewProposal}>
+              前往方案审阅
+            </Button>
+            <p className="composer-hint">修改、Agent 修订、复审和批准都在同一页完成。</p>
+          </>
+        ) : (
+          <>
+            {checkpoint && (
+              <div className="review-composer-label">
+                <span>
+                  补充意见 <small>选填</small>
+                </span>
+                <span>{answered ? `${answered} 个回答待提交` : '审阅后可直接确认'}</span>
+              </div>
             )}
-            {
-              <Button
-                type="primary"
-                shape={checkpoint ? 'default' : 'circle'}
-                aria-label={
-                  checkpoint ? (feedback.trim() ? '提交意见并继续' : '确认并继续') : '发送研究指令'
+            {tooLong && (
+              <Alert
+                type="warning"
+                message="回答与补充意见合计不能超过 20,000 字，请精简后提交。"
+              />
+            )}
+            <div className={`chat-composer ${pending ? 'is-submitting' : ''}`}>
+              <Input.TextArea
+                ref={input}
+                aria-label={checkpoint ? '专家反馈' : '研究指令'}
+                placeholder={
+                  checkpoint
+                    ? '输入你的回答或修改意见；留空表示接受当前产物并继续。'
+                    : project.state.task_prompt
+                      ? '提问、修改指定产物，或继续中断的任务…'
+                      : '描述你的研究问题、已有资料和预期成果…'
                 }
-                icon={<ArrowUpOutlined />}
-                loading={pending}
-                disabled={tooLong || (!checkpoint && !text.trim())}
-                onClick={() => void send()}
-              >
-                {checkpoint ? (feedback.trim() ? '提交回答并继续' : '确认并继续') : null}
-              </Button>
-            }
-          </div>
-        </div>
-        <p className="composer-hint">
-          {running
-            ? project.status === 'external_running'
-              ? '任务由终端启动，请在原终端管理。'
-              : '任务在后台持续运行，关闭页面后仍会继续。'
-            : checkpoint
-              ? '审阅右侧产物后提交反馈，或留空确认并继续。'
-              : 'Ctrl / ⌘ + Enter 发送 · 研究会调用模型与工具'}
-        </p>
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                maxLength={20000}
+                disabled={pending}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    void send();
+                  }
+                }}
+              />
+              <div className="composer-tools">
+                <div>
+                  <Select
+                    aria-label="对话协作方式"
+                    size="small"
+                    value={mode}
+                    disabled={running || !!checkpoint}
+                    onChange={setMode}
+                    options={[
+                      { value: 'expert', label: '专家模式' },
+                      { value: 'auto', label: '自动模式' },
+                    ]}
+                  />
+                  <Tooltip title="起始节点、模型和运行参数">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<SettingOutlined />}
+                      aria-label="协作方式设置"
+                      disabled={running || !!checkpoint}
+                      onClick={onSettings}
+                    />
+                  </Tooltip>
+                </div>
+                {running && (
+                  <Button
+                    size="small"
+                    danger
+                    icon={<StopOutlined />}
+                    disabled={project.status === 'external_running'}
+                    onClick={onStop}
+                  >
+                    停止运行
+                  </Button>
+                )}
+                {
+                  <Button
+                    type="primary"
+                    shape={checkpoint ? 'default' : 'circle'}
+                    aria-label={
+                      checkpoint
+                        ? feedback.trim()
+                          ? '提交意见并继续'
+                          : '确认并继续'
+                        : '发送研究指令'
+                    }
+                    icon={<ArrowUpOutlined />}
+                    loading={pending}
+                    disabled={tooLong || (!checkpoint && !text.trim())}
+                    onClick={() => void send()}
+                  >
+                    {checkpoint ? (feedback.trim() ? '提交回答并继续' : '确认并继续') : null}
+                  </Button>
+                }
+              </div>
+            </div>
+            <p className="composer-hint">
+              {running
+                ? project.status === 'external_running'
+                  ? '任务由终端启动，请在原终端管理。'
+                  : '任务在后台持续运行，关闭页面后仍会继续。'
+                : checkpoint
+                  ? '审阅右侧产物后提交反馈，或留空确认并继续。'
+                  : 'Ctrl / ⌘ + Enter 发送 · 研究会调用模型与工具'}
+            </p>
+          </>
+        )}
       </div>
     </section>
   );

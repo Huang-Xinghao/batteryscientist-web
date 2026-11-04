@@ -1,0 +1,648 @@
+.proposal-overview {
+  padding: 24px clamp(14px, 3vw, 32px) 36px;
+  max-width: 1280px;
+  margin: auto;
+  color: #28382f;
+}
+.proposal-overview-heading {
+  margin-bottom: 20px;
+}
+.proposal-eyebrow {
+  font-size: 11px;
+  color: #718176;
+}
+.proposal-overview-heading h2 {
+  font-size: 22px;
+  margin: 8px 0;
+  font-weight: 600;
+}
+.proposal-overview-heading p,
+.proposal-section > p {
+  color: #66766b;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.proposal-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.proposal-card {
+  background: #fff;
+  border: 1px solid #dfe7e1;
+  border-radius: 10px;
+  padding: 18px;
+  min-width: 0;
+}
+.proposal-card.is-focus {
+  border-top: 3px solid #b49a5a;
+  background: #fffefa;
+}
+.proposal-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 8px;
+}
+.proposal-card h3 {
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.65;
+}
+.proposal-card-summary {
+  font-size: 14px;
+  line-height: 1.9;
+  margin: 12px 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.proposal-card-actions .ant-btn {
+  padding-left: 0;
+  font-size: 12px;
+}
+.proposal-details {
+  margin-top: 12px;
+  font-size: 13px;
+  min-width: 0;
+}
+.proposal-details > summary {
+  cursor: pointer;
+  color: #597363;
+  padding: 8px 0;
+}
+.proposal-details > summary:focus-visible {
+  outline: 2px solid #46735a;
+  outline-offset: 3px;
+}
+.proposal-details > .markdown {
+  padding: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.proposal-details .markdown pre,
+.proposal-details .markdown table {
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+.proposal-section {
+  margin-top: 22px;
+}
+.proposal-section h2 {
+  font-size: 15px;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.proposal-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.proposal-section-heading > span,
+.proposal-section-heading > div > span {
+  color: #718176;
+  font-size: 12px;
+}
+.proposal-method-section,
+.proposal-impact,
+.proposal-feedback {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #dfe7e1;
+  border-radius: 10px;
+}
+.proposal-method-section > .idea-graph {
+  height: clamp(340px, 50vh, 540px);
+  border: 1px solid #e2e8e4;
+  border-radius: 8px;
+}
+.proposal-impact p,
+.proposal-impact li {
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.proposal-feedback > .ant-space {
+  margin-top: 12px;
+}
+.proposal-feedback .proposal-handoff-note {
+  font-size: 12px;
+  margin: 12px 0 0;
+  color: #7d877f;
+}
+.proposal-inline-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+}
+.proposal-inline-editor label {
+  font-size: 12px;
+  color: #617268;
+}
+.idea-reading-pane {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.idea-reading-pane.is-canvas {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+@media (max-width: 1100px) {
+  .proposal-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .proposal-overview {
+    padding-top: 18px;
+  }
+  .proposal-overview-heading h2 {
+    font-size: 20px;
+  }
+  .proposal-card,
+  .proposal-method-section,
+  .proposal-impact,
+  .proposal-feedback {
+    padding: 14px;
+  }
+  .proposal-section-heading {
+    flex-wrap: wrap;
+  }
+  .proposal-card .ant-btn {
+    min-height: 36px;
+  }
+}
+.idea-workspace {
+  container: proposal-workspace / inline-size;
+}
+.proposal-workflow-actions {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #dfe7e1;
+  background: #fff;
+}
+.proposal-workflow-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #66766b;
+  min-width: 0;
+}
+.proposal-workflow-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.proposal-workflow-buttons > .ant-btn {
+  height: 36px;
+  border-radius: 8px;
+  padding-inline: 12px;
+  box-shadow: none;
+}
+@container proposal-workspace (min-width: 430px) {
+  .proposal-workflow-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container proposal-workspace (min-width: 1000px) {
+  .proposal-workflow-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .proposal-workflow-buttons {
+    grid-template-columns: repeat(3, auto);
+  }
+}
+.proposal-revision {
+  padding: 18px;
+  border: 1px solid #c8d9cd;
+  border-radius: 10px;
+  background: #f3f8f4;
+  margin: 0 0 20px;
+}
+.proposal-revision p {
+  font-size: 13px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.proposal-revision h3 {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
+}
+.proposal-revision-item {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #dfe7e1;
+}
+.proposal-revision .proposal-previous {
+  color: #7a817d;
+}
+.proposal-decisions {
+  background: #fbf8ef;
+  border: 1px solid #e8ddbd;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.proposal-decisions:focus {
+  outline: 3px solid #c88b21;
+  outline-offset: 3px;
+}
+.proposal-decision-card {
+  background: #fff;
+  border: 1px solid #e7e4d9;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 12px;
+}
+.proposal-decision-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.proposal-decision-number {
+  font-size: 12px;
+  color: #8b6b28;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.proposal-decision-write.ant-btn {
+  color: #2d6544;
+  border-color: #bbd1c2;
+  background: #f4f9f5;
+  border-radius: 8px;
+  height: 34px;
+  box-shadow: none;
+}
+.proposal-decision-write.ant-btn:hover {
+  color: #214e32;
+  border-color: #6c9c7d;
+  background: #edf5ef;
+}
+.proposal-decision-card > .proposal-section-links {
+  padding-top: 10px;
+  border-top: 1px solid #eef0e9;
+  margin-bottom: 0;
+}
+.proposal-workflow-note.has-decisions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  max-height: none;
+  overflow: visible;
+}
+.proposal-workflow-note.has-decisions > span {
+  color: #875415;
+}
+.proposal-locate-decisions.ant-btn {
+  height: auto;
+  padding: 0;
+  font-weight: 600;
+}
+.proposal-selection-action {
+  position: fixed;
+  z-index: 1100;
+}
+.proposal-selection-action .ant-btn {
+  border-radius: 8px;
+  box-shadow: 0 4px 18px #17392228;
+  min-height: 36px;
+}
+.proposal-quote-drawer .ant-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5ebe6;
+}
+.proposal-quote-drawer .ant-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background: #f8faf8;
+  padding: 24px;
+}
+.proposal-composer-intro {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.proposal-composer-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: #326745;
+  background: #e8f0e9;
+  border-radius: 10px;
+  font-size: 18px;
+}
+.proposal-composer-intro h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  color: #253c2d;
+}
+.proposal-composer-intro p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7b70;
+  line-height: 1.8;
+}
+.proposal-composer-eyebrow {
+  display: block;
+  color: #728278;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.proposal-composer-field {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e1e8e2;
+  border-radius: 12px;
+}
+.proposal-composer-field label {
+  color: #273e2f;
+  font-size: 14px;
+  font-weight: 600;
+}
+.proposal-composer-field > p {
+  color: #718075;
+  font-size: 12px;
+  margin: 8px 0 14px;
+  line-height: 1.7;
+}
+.proposal-composer-field textarea.ant-input {
+  padding: 12px;
+  border-radius: 8px;
+  line-height: 1.9;
+  background: #fcfdfc;
+}
+.proposal-quote-drawer .ant-drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e1e8e2;
+}
+.proposal-composer-footer p {
+  margin: 0 0 12px;
+  color: #748278;
+  font-size: 12px;
+  text-align: center;
+}
+.proposal-composer-footer .ant-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 9px;
+  background: #326745;
+  border-color: #326745;
+  box-shadow: none;
+}
+.proposal-composer-footer .ant-btn:disabled {
+  background: #edf0ed;
+  border-color: #e1e6e1;
+}
+.proposal-composer-footer .ant-btn:not(:disabled):hover {
+  background: #254f34;
+  border-color: #254f34;
+}
+.proposal-quote-drawer .ant-drawer-body > .ant-btn {
+  align-self: flex-start;
+}
+.proposal-comment-help {
+  margin: 0;
+  color: #617268;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.proposal-quote-context {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e1e8e2;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.proposal-quote-context blockquote {
+  margin: 10px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid #9ab6a2;
+  white-space: pre-wrap;
+  max-height: 30vh;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.proposal-collected-comments {
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.proposal-collected-comments summary {
+  cursor: pointer;
+}
+.proposal-collected-comments p {
+  white-space: pre-wrap;
+}
+.proposal-quote-drawer .ant-drawer-content-wrapper {
+  max-width: 100vw;
+}
+.proposal-card {
+  scroll-margin-top: 82px;
+}
+.proposal-card.is-located {
+  outline: 2px solid #40835c;
+  outline-offset: 3px;
+  background: #f5faf6;
+}
+.proposal-return-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: #fff;
+  border: 1px solid #a9c4b0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px #17392212;
+}
+.proposal-return-bar > span {
+  min-width: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proposal-return-bar .ant-btn {
+  flex-shrink: 0;
+}
+.proposal-section-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 8px 0;
+}
+.proposal-section-links > span {
+  font-size: 12px;
+  color: #66766b;
+}
+.proposal-section-links button {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: #286b45;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.proposal-section-links button:hover {
+  text-decoration: underline;
+}
+.proposal-section-links button:focus-visible,
+.proposal-revision-item > summary:focus-visible {
+  outline: 2px solid #40835c;
+  outline-offset: 3px;
+}
+.proposal-impact-list {
+  margin-top: 20px;
+}
+.proposal-impact-list > h3 > span {
+  font-weight: normal;
+  color: #66766b;
+}
+.proposal-revision-item > summary {
+  cursor: pointer;
+  line-height: 1.9;
+  font-size: 13px;
+}
+.proposal-revision-item > summary:hover {
+  color: #286b45;
+}
+.idea-canvas-view:not([hidden]) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.idea-back-overview {
+  align-self: flex-start;
+  margin: 8px 12px;
+}
+.proposal-progress {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-bottom: 1px solid #c8d9cd;
+  background: #f3f8f4;
+}
+.proposal-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.proposal-progress ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 0;
+  margin: 12px 0 8px;
+  list-style: none;
+}
+.proposal-progress li {
+  display: flex;
+  gap: 6px;
+  color: #758078;
+  font-size: 12px;
+  align-items: center;
+}
+.proposal-progress li > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #c8d9cd;
+  border-radius: 50%;
+}
+.proposal-progress li.is-current {
+  color: #225d3b;
+  font-weight: 600;
+}
+.proposal-progress li.is-current > span {
+  background: #286b45;
+  border-color: #286b45;
+  color: white;
+}
+.proposal-progress li.is-done {
+  color: #286b45;
+}
+.proposal-progress p {
+  margin: 0;
+  font-size: 12px;
+  color: #53685a;
+  line-height: 1.7;
+}
+.idea-workspace.is-busy .idea-reading-pane {
+  opacity: 0.85;
+}
+@media (max-width: 700px) {
+  .proposal-return-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .proposal-return-bar > span {
+    flex-basis: 100%;
+  }
+  .proposal-progress {
+    padding: 10px 12px;
+  }
+  .proposal-workflow-actions {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .proposal-workflow-note {
+    font-size: 11px;
+    max-height: none;
+    overflow: visible;
+  }
+  .proposal-workflow-actions .ant-btn {
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .proposal-quote-drawer .ant-drawer-body {
+    padding: 16px;
+    gap: 16px;
+  }
+  .proposal-quote-drawer .ant-drawer-footer {
+    padding: 14px 16px;
+  }
+  .proposal-composer-field,
+  .proposal-quote-context,
+  .proposal-decision-card {
+    padding: 12px;
+  }
+  .proposal-composer-intro h3 {
+    font-size: 16px;
+  }
+}

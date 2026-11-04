@@ -13,7 +13,7 @@ import {
   ReloadOutlined,
   StopOutlined,
 } from '@ant-design/icons';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { active, api, type NodeInfo, type RunInput } from '../../api/client';
 import { Status } from '../../components/Status';
 import { Artifact } from './Artifact';
@@ -31,6 +31,8 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
 }
 
 function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
+  const [searchParams] = useSearchParams();
+  const ideaCanvasOpen = ['idea-canvas', 'idea-review'].includes(searchParams.get('view') || '');
   const { message, modal } = App.useApp();
   const client = useQueryClient();
   const project = useQuery({
@@ -51,12 +53,14 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     refetchInterval: activityOpen ? 3000 : false,
   });
   const activity = useActivity(id);
-  const [selectedFile, setSelectedFile] = useState('');
-  const [selectedNode, setSelectedNode] = useState('');
+  const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
+  const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
   const [runOpen, setRunOpen] = useState(false);
   const [tab, setTab] = useState('report');
-  const [mobilePane, setMobilePane] = useState('conversation');
+  const [mobilePane, setMobilePane] = useState(ideaCanvasOpen ? 'workspace' : 'conversation');
   const [maximized, setMaximized] = useState(false);
+  const [proposalNavigation, setProposalNavigation] = useState(false);
+  const [reviewRequest, setReviewRequest] = useState(0);
   const [chatWidth, setChatWidth] = useState(38);
   const [userResized, setUserResized] = useState(false);
   const dirtyRef = useRef(false);
@@ -152,6 +156,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     selectedFile || (fileList.some((entry) => entry.path === defaultFile) ? defaultFile : '');
   const latexOpen = /\.tex$/i.test(file) && tab === 'report';
   const paperFocus = tab === 'report' && (latexOpen || /^paper\/.*\.pdf$/i.test(file));
+  const proposalFocus = file === reports.refine;
   const visibleChatWidth = latexOpen && !userResized ? 28 : chatWidth;
   const phase = nodes.find((node) => node.id === currentNode);
   async function send(text: string, mode: 'auto' | 'expert') {
@@ -199,6 +204,21 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           </Tooltip>
         </div>
         <Space size={6}>
+          {fileList.some((entry) => entry.path === reports.refine) && (
+            <Button
+              size="small"
+              onClick={() => {
+                if (dirtyRef.current) {
+                  message.info('请先保存或撤销当前修改，再打开方案审阅');
+                  return;
+                }
+                openFile(reports.refine, 'refine');
+                setReviewRequest((value) => value + 1);
+              }}
+            >
+              审阅方案
+            </Button>
+          )}
           <Button size="small" icon={<ClockCircleOutlined />} onClick={() => setActivityOpen(true)}>
             运行动态
           </Button>
@@ -257,7 +277,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
       </nav>
       <div
         ref={layoutRef}
-        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''}`}
+        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''} ${proposalFocus ? 'proposal-focus' : ''} ${proposalNavigation ? 'proposal-navigation-open' : ''}`}
         style={{ '--chat-width': `${visibleChatWidth}%` } as CSSProperties}
       >
         <Conversation
@@ -271,6 +291,14 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           loadingOlder={activity.loadingOlder}
           loadOlder={activity.loadOlder}
           onOpen={openFile}
+          onReviewProposal={() => {
+            if (dirtyRef.current) {
+              message.info('请先应用并保存，或撤销当前修改，再打开方案审阅');
+              return;
+            }
+            openFile(reports.refine, 'refine');
+            setReviewRequest((value) => value + 1);
+          }}
           onSend={send}
           onStop={stopRun}
           onSettings={() => setRunOpen(true)}
@@ -320,18 +348,33 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           <div className="workspace-panel-header">
             <div>
               <FolderOpenOutlined />
-              <h2>工作区</h2>
+              <h2>{proposalFocus ? '研究方案' : '工作区'}</h2>
               <span className="workspace-file-count">{fileList.length} 个文件</span>
             </div>
-            <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
-              <Button
-                type="text"
-                size="small"
-                aria-label={maximized ? '恢复分栏' : '展开工作区'}
-                icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-                onClick={() => setMaximized(!maximized)}
-              />
-            </Tooltip>
+            <Space size={4}>
+              {proposalFocus && (
+                <Button
+                  type="text"
+                  size="small"
+                  aria-expanded={proposalNavigation}
+                  onClick={() => {
+                    setProposalNavigation(!proposalNavigation);
+                    if (proposalNavigation) setTab('report');
+                  }}
+                >
+                  {proposalNavigation ? '收起文件导航' : '文件与产物'}
+                </Button>
+              )}
+              <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label={maximized ? '恢复分栏' : '展开工作区'}
+                  icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                  onClick={() => setMaximized(!maximized)}
+                />
+              </Tooltip>
+            </Space>
           </div>
           <Tabs
             activeKey={tab}
@@ -404,6 +447,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                     )}
                     <Artifact
                       key={`${id}:${file}`}
+                      reviewRequest={reviewRequest}
                       projectId={id}
                       path={file}
                       running={running}

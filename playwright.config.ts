@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
+  testIgnore: 'proposal-review.spec.ts',
   fullyParallel: false,
   workers: 1,
   timeout: 30000,

@@ -545,7 +545,7 @@
     inset: 0;
     border-radius: 0;
   }
-  }
+}
 @media (max-width: 700px) {
   /* Native tab scrolling avoids moving a tab beneath the pointer on focus. */
   .workspace-tabs > .ant-tabs-nav {
@@ -611,7 +611,7 @@
   .is-latex > .ant-alert-warning .ant-alert-message {
     font-size: 10px;
   }
-  }
+}
 
 /* Conversation and artifact workspace share the viewport, with independent scrolling. */
 body:has(.research-layout) .sidebar {
@@ -1395,4 +1395,26 @@ body:has(.research-layout) .main-shell {
 .paper-focus .file-selector > .ant-btn {
   flex-shrink: 0;
   color: #707070;
+}
+
+/* 方案审阅以画布为主，文件导航按需展开，避免多层固定栏挤占操作空间。 */
+.research-layout.proposal-focus:not(.proposal-navigation-open) .workspace-tabs > .ant-tabs-nav,
+.research-layout.proposal-focus:not(.proposal-navigation-open) .file-selector,
+.research-layout.proposal-focus .workspace-status,
+.research-layout.proposal-focus .workspace-file-count {
+  display: none;
+}
+.research-layout.proposal-focus .workspace-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  min-height: 36px;
+  border-bottom: 1px solid #e7eae8;
+}
+.research-layout.proposal-focus .workspace-panel-header h2 {
+  font-size: 12px;
+}
+.research-layout.proposal-focus .workspace-panel-header > div {
+  gap: 8px;
 }
