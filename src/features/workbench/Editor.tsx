@@ -49,6 +49,29 @@ monaco.editor.defineTheme('paper-latex', {
     'editorGutter.background': '#FAFAFA',
   },
 });
+// VS Code Light+ colors, scoped to Markdown source files.
+monaco.editor.defineTheme('paper-markdown', {
+  base: 'vs',
+  inherit: true,
+  rules: [
+    { token: 'keyword', foreground: '000080', fontStyle: 'bold' },
+    { token: 'string.link', foreground: '0451A5' },
+    { token: 'string', foreground: 'A31515' },
+    { token: 'variable', foreground: '001080' },
+    { token: 'comment', foreground: '008000' },
+  ],
+  colors: {
+    'editor.background': '#FFFFFF',
+    'editor.foreground': '#3B3B3B',
+    'editorLineNumber.foreground': '#858585',
+    'editorLineNumber.activeForeground': '#171717',
+    'editor.lineHighlightBackground': '#F5F5F5',
+    'editor.selectionBackground': '#ADD6FF',
+    'editor.inactiveSelectionBackground': '#E5EBF1',
+    'editorCursor.foreground': '#007ACC',
+    'editorGutter.background': '#FFFFFF',
+  },
+});
 // Bundle the editor locally so research file contents never depend on a CDN.
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 loader.config({ monaco });
@@ -61,7 +84,7 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
     instance.current?.trigger('toolbar', action, null);
     instance.current?.focus();
   }
-  const extension = path.split('.').pop();
+  const extension = path.split('.').pop()?.toLowerCase();
   const language =
     (
       { md: 'markdown', py: 'python', tex: 'latex', bib: 'latex', json: 'json' } as Record<
@@ -70,7 +93,7 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
       >
     )[extension || ''] || 'plaintext';
   return (
-    <div className="paper-code-editor">
+    <div className={`paper-code-editor ${language === 'markdown' ? 'markdown-code-editor' : ''}`}>
       <div className="paper-editor-tools">
         <span className="paper-editor-language">
           {language === 'latex' ? 'LaTeX' : language.toUpperCase()}
@@ -102,12 +125,17 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
         <Editor
           onMount={(editor) => {
             instance.current = editor;
+            void document.fonts.load('14px "Paper Mono"').then(() => {
+              monaco.editor.remeasureFonts();
+            });
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
               saveAction.current?.(),
             );
             editor.onDidChangeCursorPosition((event) => setPosition(event.position));
           }}
-          theme={language === 'latex' ? 'paper-latex' : 'vs'}
+          theme={
+            language === 'latex' ? 'paper-latex' : language === 'markdown' ? 'paper-markdown' : 'vs'
+          }
           height="100%"
           language={language}
           value={value}
@@ -115,8 +143,12 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
           options={{
             minimap: { enabled: false },
             fontSize: 14,
-            lineHeight: 23,
-            fontFamily: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
+            lineHeight: language === 'markdown' ? 25 : 23,
+            fontFamily:
+              '"Paper Mono", Consolas, "SFMono-Regular", "Microsoft YaHei", "PingFang SC", monospace',
+            fontLigatures: false,
+            fontWeight: '400',
+            letterSpacing: 0,
             lineNumbersMinChars: 3,
             glyphMargin: false,
             folding: true,
@@ -128,7 +160,9 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
             wordWrap: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            padding: { top: 16 },
+            padding: { top: 20, bottom: 24 },
+            renderWhitespace: 'selection',
+            wordWrapBreakAfterCharacters: ' \t})]?|&,;、。 ，；：？！',
             tabSize: 4,
           }}
         />

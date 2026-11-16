@@ -159,6 +159,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/laboratory/bts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bts Snapshot */
+        get: operations["bts_snapshot_api_laboratory_bts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -239,6 +256,40 @@ export interface paths {
         put?: never;
         /** Send Message */
         post: operations["send_message_api_projects__project_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Questions */
+        get: operations["list_questions_api_projects__project_id__questions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/questions/{question_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer Question */
+        post: operations["answer_question_api_projects__project_id__questions__question_id__answer_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -372,6 +423,115 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AgentView */
+        AgentView: {
+            /** Role */
+            role: string;
+            /**
+             * Status
+             * @default idle
+             */
+            status?: string;
+            /** Phase */
+            phase?: string | null;
+            /** Task Id */
+            task_id?: string | null;
+            /**
+             * Instruction
+             * @default
+             */
+            instruction?: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Error */
+            error?: string | null;
+            /**
+             * Is Active
+             * @default false
+             */
+            is_active?: boolean;
+        };
+        /** BtsChannelView */
+        BtsChannelView: {
+            /** Channel Id */
+            channel_id: string;
+            /** Unit Id */
+            unit_id: string;
+            /** Number */
+            number: string;
+            /**
+             * Status
+             * @default unknown
+             */
+            status: string;
+            /**
+             * State
+             * @default unknown
+             * @enum {string}
+             */
+            state: "running" | "finished" | "paused" | "stopped" | "idle" | "error" | "offline" | "unknown";
+            /**
+             * Status Label
+             * @default 未知
+             */
+            status_label: string;
+            /**
+             * Status Stale
+             * @default true
+             */
+            status_stale: boolean;
+            /**
+             * Measurements Stale
+             * @default true
+             */
+            measurements_stale: boolean;
+            /** Observed At */
+            observed_at: string | null;
+            /** Voltage V */
+            voltage_v: number | null;
+            /** Current A */
+            current_a: number | null;
+            /** Capacity Ah */
+            capacity_ah: number | null;
+            /** Energy Wh */
+            energy_wh: number | null;
+            /** Cycle */
+            cycle: string | null;
+            /** Step Type */
+            step_type: string | null;
+        };
+        /** BtsDeviceView */
+        BtsDeviceView: {
+            /** Id */
+            id: string;
+            /** Device Id */
+            device_id: string;
+            /** Device Type */
+            device_type: string;
+            /** Channels */
+            channels: components["schemas"]["BtsChannelView"][];
+        };
+        /** BtsSnapshotView */
+        BtsSnapshotView: {
+            /**
+             * Connection
+             * @enum {string}
+             */
+            connection: "online" | "offline" | "unconfigured";
+            /** Observed At */
+            observed_at: string | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
+            /** Message */
+            message: string | null;
+            /** Devices */
+            devices: components["schemas"]["BtsDeviceView"][];
+        };
         /** CanvasDraft */
         CanvasDraft: {
             /**
@@ -426,14 +586,6 @@ export interface components {
             report: string;
             /** Files */
             files?: string[];
-            /** Brief */
-            brief?: {
-                [key: string]: string;
-            } | null;
-            /** Previous Brief */
-            previous_brief?: {
-                [key: string]: string;
-            } | null;
             /** Decision Options */
             decision_options?: string[][] | null;
             /** Report Sha256 */
@@ -482,12 +634,8 @@ export interface components {
         MessageCreate: {
             /** Prompt */
             prompt: string;
-            /**
-             * Mode
-             * @default expert
-             * @enum {string}
-             */
-            mode?: "auto" | "expert";
+            /** Mode */
+            mode?: ("auto" | "expert") | null;
             /** Model */
             model?: string | null;
         };
@@ -590,6 +738,10 @@ export interface components {
             runs: components["schemas"]["RunView"][];
             /** Checkpoint Token */
             checkpoint_token: string;
+            /** Pending Questions */
+            pending_questions?: components["schemas"]["QuestionView"][];
+            /** Agents */
+            agents?: components["schemas"]["AgentView"][];
         };
         /** ProposalReview */
         ProposalReview: {
@@ -600,6 +752,34 @@ export interface components {
              * @default
              */
             feedback?: string;
+        };
+        /** QuestionAnswer */
+        QuestionAnswer: {
+            /** Task Id */
+            task_id: string;
+            /** Answer */
+            answer: string;
+        };
+        /** QuestionView */
+        QuestionView: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string;
+            /** Role */
+            role: string;
+            /** Phase */
+            phase: string;
+            /** Question */
+            question: string;
+            /** Options */
+            options?: string[];
+            /** Status */
+            status: string;
+            /** Live */
+            live: boolean;
+            /** Created At */
+            created_at: string;
         };
         /** ReviewSection */
         ReviewSection: {
@@ -628,7 +808,7 @@ export interface components {
              * Node
              * @enum {string}
              */
-            node: "literature" | "data_search" | "ideas" | "refine" | "experiment_plan" | "paper_plan" | "paper_figure" | "paper_write" | "paper_compile" | "improvement";
+            node: "literature" | "data_search" | "ideas" | "refine" | "experiment_plan" | "experiment_bridge" | "paper_plan" | "paper_figure" | "paper_write" | "paper_compile" | "improvement";
             /** Target */
             target: string;
             /** Instruction */
@@ -648,7 +828,7 @@ export interface components {
              * @default start
              * @enum {string}
              */
-            action?: "start" | "resume" | "review" | "revise" | "proposal_revise" | "proposal_approve";
+            action?: "start" | "resume" | "review" | "revise" | "coordinate" | "proposal_revise" | "proposal_approve";
             /**
              * Prompt
              * @default
@@ -662,7 +842,7 @@ export interface components {
             stop_after?: string | null;
             /**
              * Max Tool Rounds
-             * @default 100
+             * @default 300
              */
             max_tool_rounds?: number;
             /**
@@ -692,6 +872,8 @@ export interface components {
             /** Proposal Sha256 */
             proposal_sha256?: string | null;
             node_task?: components["schemas"]["RevisionTask"] | null;
+            stage_task?: components["schemas"]["StageAssignment"] | null;
+            revision_task?: components["schemas"]["RevisionTask"] | null;
         };
         /** RunView */
         RunView: {
@@ -709,6 +891,21 @@ export interface components {
             options: {
                 [key: string]: unknown;
             };
+        };
+        /** StageAssignment */
+        StageAssignment: {
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "literature" | "data_search" | "ideas" | "refine" | "experiment_plan" | "experiment_bridge" | "paper_plan" | "paper_figure" | "paper_write" | "paper_compile" | "improvement";
+            /** Instruction */
+            instruction: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "idea_generator" | "experiment" | "paper_writer" | "wiki_agent";
         };
         /** ValidationError */
         ValidationError: {
@@ -730,10 +927,10 @@ export interface components {
             /** Current Node */
             current_node?: string | null;
             /**
-             * Task Prompt
+             * Project Goal
              * @default
              */
-            task_prompt?: string;
+            project_goal?: string;
             /** Mode */
             mode?: string | null;
             /** History */
@@ -1033,6 +1230,26 @@ export interface operations {
             };
         };
     };
+    bts_snapshot_api_laboratory_bts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BtsSnapshotView"];
+                };
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;
@@ -1184,6 +1401,73 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MessageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_questions_api_projects__project_id__questions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_question_api_projects__project_id__questions__question_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionAnswer"];
             };
         };
         responses: {

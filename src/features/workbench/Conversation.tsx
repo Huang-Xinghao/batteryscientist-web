@@ -17,9 +17,27 @@ import {
   type NodeInfo,
   type Project,
   type ProjectFile,
+  type UserQuestion,
 } from '../../api/client';
 import { formatDate } from '../../lib/date';
 import { reports } from './stages';
+import { TaskQuestion } from './TaskQuestion';
+import { AgentRoster } from './AgentRoster';
+import {
+  agentNames,
+  agentActivity,
+  visibleAgent,
+  currentActor,
+  eventActor,
+  eventMatches,
+  type AgentFilter,
+} from './agents';
+import {
+  activeOperation,
+  operationLabel,
+  activityLabel,
+  conversationEvents,
+} from './chat/activity';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
@@ -31,6 +49,8 @@ function visibleText(value: unknown) {
 }
 
 export function Conversation({
+  mode,
+  onModeChange,
   project,
   files,
   nodes,
@@ -43,10 +63,13 @@ export function Conversation({
   onOpen,
   onReviewProposal,
   onSend,
+  onAnswer,
   onStop,
   onSettings,
   pending,
 }: {
+  mode: 'auto' | 'expert';
+  onModeChange: (mode: 'auto' | 'expert') => void;
   project: Project;
   files: ProjectFile[];
   nodes: NodeInfo[];
@@ -59,6 +82,7 @@ export function Conversation({
   onOpen: (path: string) => void;
   onReviewProposal: () => void;
   onSend: (text: string, mode: 'auto' | 'expert') => Promise<void>;
+  onAnswer: (question: UserQuestion, answer: string) => Promise<void>;
   onStop: () => void;
   onSettings: () => void;
   pending: boolean;
@@ -69,17 +93,16 @@ export function Conversation({
     key: '',
     values: [],
   });
-  const [mode, setMode] = useState<'auto' | 'expert'>(
-    project.state.mode === 'auto' ? 'auto' : 'expert',
-  );
   const [atBottom, setAtBottom] = useState(true);
+  const [agentFilter, setAgentFilter] = useState<AgentFilter>('follow');
+  const visibleRole = visibleAgent(project, events, agentFilter);
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<import('antd').InputRef>(null);
   const stick = useRef(true);
   const running = active(project.status);
   const checkpoint =
     project.status === 'awaiting_user' ? project.state.expert_checkpoint : undefined;
-  const reviewingProposal = checkpoint?.node === 'refine' && project.state.mode === 'expert';
+  const reviewingProposal = checkpoint?.node === 'refine';
   const questions = checkpoint?.questions || [];
   const checkpointKey = JSON.stringify([
     project.runs[0]?.id,
@@ -106,9 +129,6 @@ export function Conversation({
     if (stick.current && scroller.current)
       scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [events, project.status, project.runs.length]);
-  useEffect(() => {
-    setMode(project.state.mode === 'auto' ? 'auto' : 'expert');
-  }, [project.state.mode]);
   async function send() {
     if (pending || tooLong || (!checkpoint && !text.trim())) return;
     try {
@@ -143,10 +163,12 @@ export function Conversation({
           `${event.run_id}:${event.data.phase}:${event.data.iteration}:${event.data.call_id}`,
       ),
   );
-  const eventViews = events.filter((event) => {
+  const eventViews = conversationEvents(events).filter((event) => {
+    if (!eventMatches(event, visibleRole)) return false;
     if (event.kind === 'conversation_turn' && event.data.run_id) return false;
     if (
       [
+        'operation_progress',
         'model_heartbeat',
         'project_registered',
         'file_saved',
@@ -155,6 +177,8 @@ export function Conversation({
         'workflow_start',
         'phase_end',
         'workflow_end',
+        'model_start',
+        'model_end',
       ].includes(event.kind)
     )
       return false;
@@ -196,7 +220,10 @@ export function Conversation({
     ...new Set((project.state.history || []).map((entry) => entry.node).filter(Boolean)),
   ];
   const showHistory = !events.some((event) => event.kind === 'node_end');
-  const initialPromptShown = turns.some((turn) => turn.text === project.state.task_prompt);
+  const initialPromptShown = turns.some((turn) => turn.text === project.state.project_goal);
+  const actor = currentActor(project, events);
+  const operation = activeOperation(project);
+  const latestActivity = agentActivity(project, events, actor);
   return (
     <section className="conversation-panel" aria-label="研究对话">
       <div className="conversation-heading">
@@ -212,6 +239,47 @@ export function Conversation({
           </small>
         </Tooltip>
       </div>
+      <AgentRoster
+        project={project}
+        events={events}
+        nodes={nodes}
+        selected={agentFilter}
+        onSelect={setAgentFilter}
+      />
+      {running && (visibleRole === 'all' || visibleRole === actor) && (
+        <div className="live-activity" role="status" aria-label="当前执行进展">
+          <span className="activity-indicator">
+            <LoadingOutlined spin />
+          </span>
+          <div>
+            <strong>
+              {agentNames[actor]} ·{' '}
+              {project.status === 'stopping'
+                ? '正在保存并停止'
+                : operation
+                  ? operationLabel(operation)
+                  : activityLabel(latestActivity)}
+            </strong>
+            <small>
+              {nodeLabel(latestActivity?.data.phase || project.state.current_node)}
+              {latestActivity?.data.iteration ? ` · 第 ${latestActivity.data.iteration} 轮` : ''}
+              {latestActivity?.data.waited_seconds
+                ? ` · 已等待 ${latestActivity.data.waited_seconds} 秒`
+                : ''}
+              {operation
+                ? ` · 已耗时 ${Math.round(Number(operation.elapsed_seconds || 0))} 秒`
+                : ''}
+              {operation?.checks_completed
+                ? ` · 已完成 ${operation.checks_completed} 次证据检查`
+                : ''}
+              {operation
+                ? ` · 最近活动距今 ${Math.round(Number(operation.activity_age_seconds || 0))} 秒`
+                : ''}
+              {' · 进展将实时更新'}
+            </small>
+          </div>
+        </div>
+      )}
       <div
         className="conversation-scroll"
         ref={scroller}
@@ -240,21 +308,14 @@ export function Conversation({
               加载更早的执行记录
             </Button>
           )}
-          {project.state.task_prompt && !initialPromptShown && (
-            <article className="chat-message user-message">
-              <div className="message-role">你 · 研究目标</div>
-              <p>{project.state.task_prompt}</p>
-              <MessageActions
-                content={project.state.task_prompt}
-                onReuse={
-                  !running && !pending && !checkpoint
-                    ? () => reuseInstruction(project.state.task_prompt || '')
-                    : undefined
-                }
-              />
-            </article>
+          {project.state.project_goal && !initialPromptShown && (
+            <details className="research-goal">
+              <summary>主控整理的研究目标</summary>
+              <p>{project.state.project_goal}</p>
+              <small>由主控根据研究指令整理，原始指令保留在对话中。</small>
+            </details>
           )}
-          {!project.state.task_prompt && !timeline.length && (
+          {!project.state.project_goal && !timeline.length && (
             <div className="conversation-welcome">
               <span className="agent-symbol">✦</span>
               <h2>从一个研究问题开始</h2>
@@ -347,7 +408,12 @@ export function Conversation({
               return content ? (
                 <article key={item.key} className="chat-message agent-message">
                   <div className="message-role">
-                    <span className="agent-symbol">✦</span> Paper Agent <small>{label}</small>
+                    <span className="agent-symbol">✦</span>{' '}
+                    {agentNames[eventActor(event) || 'main']}{' '}
+                    <small>
+                      {label}
+                      {data.streaming ? ' · 回复生成中' : ''}
+                    </small>
                   </div>
                   <div className="chat-markdown">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
@@ -394,7 +460,7 @@ export function Conversation({
                   </summary>
                   <div className="tool-activity-body">
                     <p>
-                      {label} · {round}
+                      {agentNames[eventActor(event) || 'main']} · {label} · {round}
                     </p>
                     {data.arguments || started?.data.arguments ? (
                       <>
@@ -417,7 +483,8 @@ export function Conversation({
               return (
                 <article key={item.key} className="chat-message agent-message">
                   <div className="message-role">
-                    <span className="agent-symbol">✦</span> Paper Agent{' '}
+                    <span className="agent-symbol">✦</span>{' '}
+                    {agentNames[eventActor(event) || 'main']}{' '}
                     <small>{formatDate(event.created_at)}</small>
                   </div>
                   <p>
@@ -437,8 +504,31 @@ export function Conversation({
                   )}
                 </article>
               );
+            if (event.kind === 'assignment_start' || event.kind === 'assignment_end') {
+              const assignment = data.assignment as Record<string, unknown> | undefined;
+              const role = event.kind === 'assignment_start' ? eventActor(event) : undefined;
+              return (
+                <div className="agent-handoff" key={item.key}>
+                  <strong>
+                    {event.kind === 'assignment_start'
+                      ? `主控 → ${agentNames[role || 'main']}`
+                      : '角色 → 主控 · 已交接'}
+                  </strong>
+                  <p>
+                    {event.kind === 'assignment_start'
+                      ? `${nodeLabel(assignment?.node)} · ${String(assignment?.instruction || '')}`
+                      : statusLabels[String(data.status)] || String(data.status || '已交付')}
+                  </p>
+                </div>
+              );
+            }
             const labels: Record<string, string> = {
+              herdr_submitted: `${label} · 已交给 Herdr 执行`,
+              herdr_display_error: 'Herdr 状态显示异常，任务仍以执行回执为准',
               node_start: `开始${label}`,
+              wiki_resumed: '已恢复 Wiki 来源、阅读进度和审阅记录',
+              context_compacting: '正在压缩上下文',
+              working_context_compacted: '上下文压缩完成，继续执行',
               model_start: `${label} · 正在分析 ${round}`,
               model_end: `${label} · 已完成本轮分析`,
               node_progress: `${label} · ${String(data.stage || '更新进度')}`,
@@ -453,7 +543,7 @@ export function Conversation({
               <div key={item.key} className={`execution-step ${data.error ? 'has-error' : ''}`}>
                 <span className="step-dot" />
                 <div>
-                  {labels[event.kind]}
+                  {agentNames[eventActor(event) || 'main']} · {labels[event.kind]}
                   {data.error ? <p>{String(data.error)}</p> : null}
                 </div>
                 <time>{formatDate(event.created_at)}</time>
@@ -528,12 +618,22 @@ export function Conversation({
               )}
             </article>
           )}
+          {(project.pending_questions || []).map((question) => (
+            <TaskQuestion
+              key={question.id}
+              question={question}
+              stopping={project.status === 'stopping'}
+              onAnswer={onAnswer}
+            />
+          ))}
           {running && (
             <div className="agent-working">
               <LoadingOutlined spin />
               <span>
-                {nodeLabel(project.state.current_node)} ·{' '}
-                {String(project.progress.tool || project.progress.phase || '研究执行中')}
+                {project.pending_questions?.length
+                  ? '等待你的回答'
+                  : nodeLabel(project.state.current_node)}{' '}
+                · {String(project.progress.tool || project.progress.phase || '研究执行中')}
               </span>
             </div>
           )}
@@ -604,7 +704,7 @@ export function Conversation({
                 placeholder={
                   checkpoint
                     ? '输入你的回答或修改意见；留空表示接受当前产物并继续。'
-                    : project.state.task_prompt
+                    : project.state.project_goal
                       ? '提问、修改指定产物，或继续中断的任务…'
                       : '描述你的研究问题、已有资料和预期成果…'
                 }
@@ -627,7 +727,7 @@ export function Conversation({
                     size="small"
                     value={mode}
                     disabled={running || !!checkpoint}
-                    onChange={setMode}
+                    onChange={onModeChange}
                     options={[
                       { value: 'expert', label: '专家模式' },
                       { value: 'auto', label: '自动模式' },

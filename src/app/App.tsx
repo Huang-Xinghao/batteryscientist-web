@@ -6,6 +6,7 @@ import {
   BookOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  ExperimentOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
@@ -13,6 +14,7 @@ import { api } from '../api/client';
 import { Projects } from '../features/projects/Projects';
 import { Workbench } from '../features/workbench/Workbench';
 import { Library } from '../features/library/Library';
+import { Laboratory } from '../features/laboratory/Laboratory';
 export function App() {
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000 });
   const location = useLocation();
@@ -62,6 +64,15 @@ export function App() {
           <DatabaseOutlined />
           电池资源库
         </Link>
+        <Link
+          className={`nav-item ${location.pathname.startsWith('/laboratory') ? 'selected' : ''}`}
+          to="/laboratory"
+          aria-label="物理实验室"
+          title="物理实验室"
+        >
+          <ExperimentOutlined />
+          物理实验室
+        </Link>
         <div className="sidebar-note">
           <BookOutlined />
           <p>让研究，循证向前。</p>
@@ -102,6 +113,7 @@ export function App() {
           <Route path="/projects/:id" element={<Workbench nodes={health.data?.nodes || []} />} />
           <Route path="/libraries/paradigms" element={<Library kind="paradigms" />} />
           <Route path="/libraries/battery" element={<Library kind="battery" />} />
+          <Route path="/laboratory" element={<Laboratory />} />
           <Route
             path="/settings"
             element={

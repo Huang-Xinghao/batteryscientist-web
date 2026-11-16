@@ -81,6 +81,7 @@ const nodeTypes = { module: Module };
 export default function IdeaCanvas(props: {
   projectId: string;
   running: boolean;
+  workflowStage?: string;
   onDirtyChange: (dirty: boolean) => void;
   viewSwitch: ReactNode;
 }) {
@@ -103,7 +104,7 @@ export default function IdeaCanvas(props: {
     refetchOnWindowFocus: false,
     gcTime: 0,
     refetchInterval: (query) =>
-      tracking || active(query.state.data?.operation?.status || '') ? 1500 : false,
+      tracking || props.running || active(query.state.data?.operation?.status || '') ? 1500 : false,
   });
   const result = saved.data;
   useEffect(() => {
@@ -173,6 +174,7 @@ export default function IdeaCanvas(props: {
 function CanvasEditor({
   projectId,
   running,
+  workflowStage,
   onDirtyChange,
   proposal,
   sourceHash,
@@ -183,6 +185,7 @@ function CanvasEditor({
 }: {
   projectId: string;
   running: boolean;
+  workflowStage?: string;
   onDirtyChange: (dirty: boolean) => void;
   proposal: string;
   sourceHash: string;
@@ -799,7 +802,17 @@ function CanvasEditor({
           </Button>
         </Space>
       </div>
-      {running && <RevisionProgress operation={status.operation} />}
+      {active(status.operation?.status || '') ? (
+        <RevisionProgress operation={status.operation} />
+      ) : (
+        running && (
+          <Alert
+            type="info"
+            showIcon
+            message={`项目正在进行${workflowStage ? `：${workflowStage}` : '后续研究'}。当前方案和已生成报告可继续查看。`}
+          />
+        )
+      )}
       {stale && (
         <Alert
           type="warning"
@@ -851,7 +864,9 @@ function CanvasEditor({
           >
             <span>
               {running
-                ? '正在处理，完成后会更新本页；你可在运行动态查看进度或停止。'
+                ? active(status.operation?.status || '')
+                  ? '方案操作正在处理，完成后会更新本页；可在运行动态查看进度。'
+                  : `项目正在进行${workflowStage ? `：${workflowStage}` : '后续研究'}；可通过文件目录或阶段产物查看已生成报告。`
                 : commentDraftChanged
                   ? '有一条意见尚未加入本轮，请继续填写并加入。'
                   : revision?.approved
@@ -861,7 +876,7 @@ function CanvasEditor({
                       : serverStatus.context === 'auto'
                         ? '自动模式保持原流程；此处修订草稿不会自动改写或重启研究。'
                         : decisionCount
-                          ? `还有 ${decisionCount} 个待决问题，补充决定后请再次提交修订。`
+                          ? `Agent 提出了 ${decisionCount} 个待决问题供你审阅；可补充意见后修订，也可批准当前方案进入实验规划。`
                           : dirty || !revision?.synced
                             ? '集中修改后提交 Agent 统一修订；满意后再批准交付。'
                             : '请复审本轮修改和关联影响，满意后批准进入实验规划。'}

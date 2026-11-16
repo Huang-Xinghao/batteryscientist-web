@@ -5,6 +5,7 @@ export type Checkpoint = Schemas['CheckpointView'];
 export type WorkflowState = Schemas['WorkflowView'];
 export type Run = Schemas['RunView'];
 export type Project = Schemas['ProjectView'];
+export type UserQuestion = Schemas['QuestionView'];
 export type ProjectFile = { path: string; size: number; modified: number };
 export type FileContent = {
   kind: 'text' | 'binary';
@@ -15,6 +16,9 @@ export type FileContent = {
 };
 export type RunInput = import('./schema').components['schemas']['RunCreate'];
 export type Health = Schemas['HealthView'];
+export type BtsSnapshot = Schemas['BtsSnapshotView'];
+export type BtsChannel = Schemas['BtsChannelView'];
+export type BtsDevice = Schemas['BtsDeviceView'];
 export type ActivityEvent = {
   id: number;
   project_id: string;
@@ -91,6 +95,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 export const api = {
+  btsSnapshot: (signal?: AbortSignal) => request<BtsSnapshot>('/laboratory/bts', { signal }),
   paradigmGraph: () => request<ParadigmGraph>('/libraries/paradigms/graph'),
   paradigmFigures: () => request<LibraryFigures>('/libraries/paradigms/figures'),
   library: (kind: LibraryKind, q = '', category = '') =>
@@ -112,9 +117,18 @@ export const api = {
       { method: 'POST', body: JSON.stringify(body) },
     ),
   message: (id: string, body: { prompt: string; mode: 'auto' | 'expert' }) =>
-    request<{ id: string } | { intent: 'chat'; reply: string }>(`/projects/${id}/messages`, {
+    request<
+      | { id: string }
+      | { intent: 'chat'; reply: string }
+      | { intent: 'status'; reply: string; accepted: false }
+    >(`/projects/${id}/messages`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+  answerQuestion: (id: string, question: UserQuestion, answer: string) =>
+    request<{ status: string }>(`/projects/${id}/questions/${question.id}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ task_id: question.task_id, answer }),
     }),
   stop: (id: string) => request(`/projects/${id}/stop`, { method: 'POST' }),
   files: (id: string) =>

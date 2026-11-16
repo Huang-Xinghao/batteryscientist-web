@@ -15,7 +15,9 @@ import { isImagePath } from '../../shared/file-preview/display';
 import { siblingImages } from '../../shared/file-preview/siblingImages';
 const IdeaCanvas = lazy(() => import('./idea-canvas/IdeaCanvas'));
 
-export function Artifact(props: Parameters<typeof FileArtifact>[0] & { reviewRequest?: number }) {
+export function Artifact(
+  props: Parameters<typeof FileArtifact>[0] & { reviewRequest?: number; workflowStage?: string },
+) {
   const [canvas, setCanvas] = useState(true);
   useEffect(() => {
     if (props.reviewRequest !== undefined) setCanvas(true);
@@ -48,6 +50,7 @@ export function Artifact(props: Parameters<typeof FileArtifact>[0] & { reviewReq
               viewSwitch={viewSwitch}
               projectId={props.projectId}
               running={props.running}
+              workflowStage={props.workflowStage}
               onDirtyChange={(value) => {
                 dirty.current = value;
                 props.onDirtyChange(value);

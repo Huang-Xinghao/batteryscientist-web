@@ -1397,9 +1397,7 @@ body:has(.research-layout) .main-shell {
   color: #707070;
 }
 
-/* 方案审阅以画布为主，文件导航按需展开，避免多层固定栏挤占操作空间。 */
-.research-layout.proposal-focus:not(.proposal-navigation-open) .workspace-tabs > .ant-tabs-nav,
-.research-layout.proposal-focus:not(.proposal-navigation-open) .file-selector,
+/* 方案阅读期间也保留文件入口，便于查看其他已生成的报告。 */
 .research-layout.proposal-focus .workspace-status,
 .research-layout.proposal-focus .workspace-file-count {
   display: none;

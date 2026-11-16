@@ -57,7 +57,7 @@ await writeFile(
   join(project, 'workflow-state.json'),
   JSON.stringify({
     run_id: 'browser-fixture',
-    task_prompt: '研究退役电池的寿命预测与跨电芯泛化',
+    project_goal: '研究退役电池的寿命预测与跨电芯泛化',
     mode: 'expert',
     status: 'awaiting_user',
     current_node: 'literature',
@@ -100,7 +100,7 @@ const child = spawn(python, ['-m', 'paper_agent.api.app'], {
     ...process.env,
     PAPER_AGENT_PROJECT_ROOTS: projects,
     PAPER_AGENT_WEB_DATA: join(root, 'metadata'),
-    PAPER_AGENT_API_PORT: '8001',
+    PAPER_AGENT_API_PORT: process.env.PAPER_AGENT_E2E_API_PORT || '8001',
     PAPER_AGENT_WIKI_ROOT: wiki,
     PAPER_AGENT_BATTERY_ROOT: battery,
   },

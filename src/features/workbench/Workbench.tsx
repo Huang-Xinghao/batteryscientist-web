@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Drawer, Dropdown, Empty, Skeleton, Space, Tabs, Tooltip } from 'antd';
 import {
@@ -14,7 +14,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { active, api, type NodeInfo, type RunInput } from '../../api/client';
+import { active, api, type NodeInfo, type RunInput, type UserQuestion } from '../../api/client';
 import { Status } from '../../components/Status';
 import { Artifact } from './Artifact';
 import { ArtifactDirectory } from './ArtifactDirectory';
@@ -56,10 +56,14 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
   const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
   const [runOpen, setRunOpen] = useState(false);
+  const [mode, setMode] = useState<'auto' | 'expert'>('expert');
+  useEffect(() => {
+    if (project.data?.state.mode === 'auto' || project.data?.state.mode === 'expert')
+      setMode(project.data.state.mode);
+  }, [project.data?.state.mode]);
   const [tab, setTab] = useState('report');
   const [mobilePane, setMobilePane] = useState(ideaCanvasOpen ? 'workspace' : 'conversation');
   const [maximized, setMaximized] = useState(false);
-  const [proposalNavigation, setProposalNavigation] = useState(false);
   const [reviewRequest, setReviewRequest] = useState(0);
   const [chatWidth, setChatWidth] = useState(38);
   const [userResized, setUserResized] = useState(false);
@@ -99,7 +103,8 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   function stopRun() {
     modal.confirm({
       title: '停止当前运行？',
-      content: '将中断当前模型或实验进程并保留已保存的产物。后续可从已有节点恢复。',
+      content:
+        '将通知本轮主控和角色任务取消，并保留已保存的产物。收到执行回执后确认结果；结果不明时需先核查。',
       okText: '停止运行',
       okButtonProps: { danger: true },
       onOk: () => stop.mutateAsync(),
@@ -186,7 +191,13 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           onCancel: () => reject(new Error('cancelled')),
         });
       });
-    } else await sendMessage.mutateAsync({ prompt: text, mode });
+    } else {
+      const result = await sendMessage.mutateAsync({ prompt: text, mode });
+      if ('accepted' in result && !result.accepted) {
+        message.info(result.reply);
+        throw new Error('not accepted');
+      }
+    }
   }
   return (
     <div className="workbench-page">
@@ -249,7 +260,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
               onClick={() => setRunOpen(true)}
               disabled={!!checkpoint}
             >
-              {p.state.task_prompt ? '继续研究' : '启动研究'}
+              {p.state.project_goal ? '继续研究' : '启动研究'}
             </Button>
           )}
         </Space>
@@ -277,10 +288,12 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
       </nav>
       <div
         ref={layoutRef}
-        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''} ${proposalFocus ? 'proposal-focus' : ''} ${proposalNavigation ? 'proposal-navigation-open' : ''}`}
+        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''} ${proposalFocus ? 'proposal-focus' : ''}`}
         style={{ '--chat-width': `${visibleChatWidth}%` } as CSSProperties}
       >
         <Conversation
+          mode={mode}
+          onModeChange={setMode}
           project={p}
           files={fileList}
           nodes={nodes}
@@ -298,6 +311,15 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             }
             openFile(reports.refine, 'refine');
             setReviewRequest((value) => value + 1);
+          }}
+          onAnswer={async (question: UserQuestion, answer: string) => {
+            if (dirtyRef.current) throw new Error('请先保存或撤销产物修改，再回答问题');
+            try {
+              await api.answerQuestion(id, question, answer);
+              message.success('回答已送回原任务，正在继续');
+            } finally {
+              client.invalidateQueries({ queryKey: ['project', id] });
+            }
           }}
           onSend={send}
           onStop={stopRun}
@@ -352,19 +374,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
               <span className="workspace-file-count">{fileList.length} 个文件</span>
             </div>
             <Space size={4}>
-              {proposalFocus && (
-                <Button
-                  type="text"
-                  size="small"
-                  aria-expanded={proposalNavigation}
-                  onClick={() => {
-                    setProposalNavigation(!proposalNavigation);
-                    if (proposalNavigation) setTab('report');
-                  }}
-                >
-                  {proposalNavigation ? '收起文件导航' : '文件与产物'}
-                </Button>
-              )}
               <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
                 <Button
                   type="text"
@@ -451,6 +460,11 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                       projectId={id}
                       path={file}
                       running={running}
+                      workflowStage={
+                        nodes.find(
+                          (node) => node.id === (p.progress.current_node || p.state.current_node),
+                        )?.label
+                      }
                       files={fileList}
                       onDirtyChange={(dirty) => {
                         dirtyRef.current = dirty;
@@ -548,6 +562,8 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
         )}
       </Drawer>
       <RunDialog
+        mode={mode}
+        onModeChange={setMode}
         open={runOpen}
         onClose={() => setRunOpen(false)}
         onRun={(values) => {

@@ -61,8 +61,8 @@ export function RevisionPanel({
       )}
       {!!revision.questions.length && (
         <section className="proposal-decisions" tabIndex={-1} aria-label="待决策问题">
-          <h3>这些问题需要你决定</h3>
-          <p>点击“填写决定”，或选中文字添加到对话，写好后统一提交修订。</p>
+          <h3>供你审阅的问题</h3>
+          <p>可填写决定后提交修订，也可保留当前方案并直接批准进入实验规划。</p>
           {revision.questions.map((question, index) => (
             <article
               className="proposal-decision-card"

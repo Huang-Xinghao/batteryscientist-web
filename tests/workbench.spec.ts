@@ -1,4 +1,61 @@
 import { expect, test } from '@playwright/test';
+
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'wait' });
+});
+
+async function mockCoordinatorReply(page: import('@playwright/test').Page) {
+  let prompt = '';
+  await page.route('**/api/projects/*/messages', async (route) => {
+    prompt = route.request().postDataJSON().prompt;
+    await route.fulfill({ status: 202, json: { id: 'mock-coordinator-run' } });
+  });
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...project,
+        runs: prompt
+          ? [
+              {
+                id: 'mock-coordinator-run',
+                status: 'completed',
+                created_at: '2026-11-13T08:00:00Z',
+                options: { action: 'coordinate', prompt },
+              },
+            ]
+          : [],
+      },
+    });
+  });
+  await page.route('**/api/projects/*/activity?*', (route) => {
+    const projectId = new URL(route.request().url()).pathname.split('/')[3];
+    return route.fulfill({
+      json: {
+        has_more: false,
+        events: prompt
+          ? [
+              {
+                id: 900,
+                project_id: projectId,
+                run_id: 'mock-coordinator-run',
+                kind: 'assistant_output',
+                data: {
+                  role: 'main',
+                  phase: 'coordinator',
+                  content: '我是 Paper Agent，由主控协调研究任务。',
+                },
+                created_at: new Date().toISOString(),
+              },
+            ]
+          : [],
+      },
+    });
+  });
+}
+
 async function openFixture(page: import('@playwright/test').Page, requireEditor = true) {
   await page.goto('/');
   await page
@@ -85,10 +142,7 @@ test('mobile workbench fits the viewport and file navigation works', async ({ pa
   await openFixture(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('RESEARCH_REPORT.md');
-  await page
-    .locator('.directory-file')
-    .filter({ hasText: 'RESEARCH_REPORT.md' })
-    .click();
+  await page.locator('.directory-file').filter({ hasText: 'RESEARCH_REPORT.md' }).click();
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-mobile-tested.png', fullPage: true });
 });
@@ -208,10 +262,7 @@ test('review questions have independent drafts and submit their matching answers
 test('LaTeX source and PDF appear together and images open in a gallery', async ({ page }) => {
   await openFixture(page);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('paper/main.tex');
-  await page
-    .locator('.directory-file')
-    .filter({ hasText: 'main.tex' })
-    .click();
+  await page.locator('.directory-file').filter({ hasText: 'main.tex' }).click();
   await expect(page.locator('.workspace-panel-header')).toBeHidden();
   await expect(page.getByRole('tab', { name: '文件', exact: true })).toBeHidden();
   await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
@@ -300,10 +351,7 @@ for (const viewport of [
     );
     await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
     await page.getByRole('combobox', { name: '选择项目文件' }).fill('paper/main.tex');
-    await page
-      .locator('.directory-file')
-      .filter({ hasText: 'main.tex' })
-      .click();
+    await page.locator('.directory-file').filter({ hasText: 'main.tex' }).click();
     const source = page.locator('.latex-source .monaco-editor');
     await expect(source).toBeVisible();
     const scroll = source.locator('.monaco-scrollable-element').first();
@@ -431,7 +479,7 @@ test('composer starts research and preserves its draft when submission fails', a
   await expect(page.getByRole('heading', { name: '对话启动测试' })).toBeVisible();
   let shouldFail = true;
   let body: Record<string, unknown> | undefined;
-  await page.route('**/api/projects/*/runs', async (route) => {
+  await page.route('**/api/projects/*/messages', async (route) => {
     body = route.request().postDataJSON();
     await route.fulfill({
       status: shouldFail ? 409 : 202,
@@ -444,16 +492,18 @@ test('composer starts research and preserves its draft when submission fails', a
   await expect(page.getByText('已有研究正在运行，请稍后重试')).toBeVisible();
   await expect(draft).toHaveValue('请研究跨电芯寿命预测中的泛化误差。');
   shouldFail = false;
+  await expect(draft).toBeEnabled();
   await draft.press('ControlOrMeta+Enter');
   await expect(draft).toHaveValue('');
-  expect(body?.action).toBe('start');
+  expect(body?.action).toBeUndefined();
   expect(body?.mode).toBe('expert');
   expect(body?.prompt).toBe('请研究跨电芯寿命预测中的泛化误差。');
 });
 
-test('new project answers identity questions without starting research and retains chat on reload', async ({
+test('new project sends questions to the coordinator and replays saved chat on reload', async ({
   page,
 }) => {
+  await mockCoordinatorReply(page);
   await page.goto('/');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('普通问答测试');
@@ -477,15 +527,13 @@ test('new project answers identity questions without starting research and retai
   await expect(
     page.locator('.chat-markdown').filter({ hasText: '我是 Paper Agent' }),
   ).toBeVisible();
+  await page.unrouteAll({ behavior: 'wait' });
 });
 
 test('paper divider resizes with the keyboard and resets on double click', async ({ page }) => {
   await openFixture(page);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('main.tex');
-  await page
-    .locator('.directory-file')
-    .filter({ hasText: 'main.tex' })
-    .click();
+  await page.locator('.directory-file').filter({ hasText: 'main.tex' }).click();
   const divider = page.getByRole('separator', { name: '调整源码与 PDF 宽度' });
   await expect(divider).toBeVisible();
   const source = page.locator('.latex-source');
@@ -515,15 +563,13 @@ test('gallery filters images, recovers failed loads and opens the preview', asyn
 test('single image opens the shared sibling preview', async ({ page }) => {
   await openFixture(page);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('figures/test.png');
-  await page
-    .locator('.directory-file')
-    .filter({ hasText: 'test.png' })
-    .click();
+  await page.locator('.directory-file').filter({ hasText: 'test.png' }).click();
   await page.locator('.image-preview .ant-image').click();
   await expect(page.locator('.ant-image-preview-img')).toBeVisible();
 });
 
 test('message copy and reuse protect an existing composer draft', async ({ page, context }) => {
+  await mockCoordinatorReply(page);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
   await page.getByRole('button', { name: '新建研究项目' }).click();
@@ -551,6 +597,7 @@ test('message copy and reuse protect an existing composer draft', async ({ page,
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'artifacts/chat-bubbles-mobile.png' });
+  await page.unrouteAll({ behavior: 'wait' });
 });
 
 test('completed project messages use routing instead of resuming improvement', async ({ page }) => {
@@ -580,7 +627,7 @@ test('completed project messages use routing instead of resuming improvement', a
   await page.unrouteAll({ behavior: 'wait' });
 });
 
-test('running project can send a status question without stopping the task', async ({ page }) => {
+test('running project retains unaccepted messages without stopping the task', async ({ page }) => {
   await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
     const response = await route.fetch();
     const project = await response.json();
@@ -592,14 +639,92 @@ test('running project can send a status question without stopping the task', asy
   let prompt = '';
   await page.route('**/api/projects/*/messages', async (route) => {
     prompt = route.request().postDataJSON().prompt;
-    await route.fulfill({ json: { intent: 'chat', reply: '正在生成论文。' } });
+    await route.fulfill({
+      json: { intent: 'status', accepted: false, reply: '当前任务仍在执行，请稍后提交。' },
+    });
   });
   await openFixture(page, false);
   await page.getByRole('textbox', { name: '研究指令' }).fill('现在进度怎么样？');
   await page.getByRole('button', { name: '发送研究指令' }).click();
   await expect.poll(() => prompt).toBe('现在进度怎么样？');
+  await expect(page.getByRole('textbox', { name: '研究指令' })).toHaveValue('现在进度怎么样？');
+  await expect(page.getByText('当前任务仍在执行，请稍后提交。')).toBeVisible();
   await expect(
     page.locator('.chat-composer').getByRole('button', { name: '停止运行' }),
   ).toBeVisible();
   await page.unrouteAll({ behavior: 'wait' });
 });
+
+for (const width of [1512, 390]) {
+  test(`方案交付后运行实验时可打开已有报告 ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const proposal = 'refine-logs/FINAL_PROPOSAL.md';
+    await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+      const response = await route.fetch();
+      const project = await response.json();
+      await route.fulfill({
+        response,
+        json: {
+          ...project,
+          status: 'running',
+          state: { ...project.state, current_node: 'experiment_bridge', expert_checkpoint: null },
+          progress: { current_node: 'experiment_bridge' },
+        },
+      });
+    });
+    await page.route('**/api/projects/*/files', async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      await route.fulfill({
+        response,
+        json: {
+          ...data,
+          files: [...data.files, { path: proposal, size: 100, modified: 1 }],
+        },
+      });
+    });
+    await page.route('**/api/projects/*/file?*', async (route) => {
+      if (new URL(route.request().url()).searchParams.get('path') !== proposal)
+        return route.continue();
+      await route.fulfill({
+        json: {
+          kind: 'text',
+          path: proposal,
+          content: '# 已交付研究方案\n\n## 研究方法\n\n比较时序模型。',
+          sha256: 'proposal-hash',
+          editable: true,
+        },
+      });
+    });
+    await page.route('**/api/projects/*/idea-canvas', (route) =>
+      route.fulfill({
+        json: {
+          sha256: '',
+          sourceHash: 'proposal-hash',
+          draft: null,
+          context: 'historical',
+          operation:
+            width === 1512
+              ? {
+                  id: 'prior-approval',
+                  action: 'proposal_approve',
+                  status: 'completed',
+                }
+              : null,
+        },
+      }),
+    );
+    await openFixture(page, false);
+    await page.getByRole('button', { name: '审阅方案', exact: true }).click();
+    await expect(
+      page.getByText('项目正在进行：实验执行。当前方案和已生成报告可继续查看。'),
+    ).toBeVisible();
+    await expect(page.getByRole('region', { name: '方案任务进度' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
+    await page.getByRole('tab', { name: '阶段产物', exact: true }).click();
+    await page.locator('.stage-card').filter({ hasText: 'literature/RESEARCH_REPORT.md' }).click();
+    await expect(page.locator('.artifact-filename')).toHaveText('RESEARCH_REPORT.md');
+    await expect(page.locator('.monaco-editor').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
+  });
+}

@@ -56,14 +56,14 @@ test('连续修订、复审和批准交付同一版本，规划后停下', async
   await feedback(page, '同步检查研究主张、强健康对照和比较顺序的关联影响。');
   await revise(page, request, id);
   await expect(
-    page.getByRole('heading', { name: '这些问题需要你决定', exact: true }),
+    page.getByRole('heading', { name: '供你审阅的问题', exact: true }),
   ).toBeVisible();
-  await expect(approve).toBeDisabled();
+  await expect(approve).toBeEnabled();
   expect((await file(request, id)).sha256).toBe(initial.sha256);
 
   await feedback(page, '确定先比较简单统计融合，复杂编码器后置。');
   await revise(page, request, id);
-  await expect(page.getByRole('heading', { name: '这些问题需要你决定', exact: true })).toHaveCount(
+  await expect(page.getByRole('heading', { name: '供你审阅的问题', exact: true })).toHaveCount(
     0,
   );
   await expect(approve).toBeEnabled();

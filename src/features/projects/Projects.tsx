@@ -47,7 +47,7 @@ export function Projects() {
     () =>
       all.filter(
         (p) =>
-          `${p.name} ${p.state.task_prompt || ''}`.toLowerCase().includes(search.toLowerCase()) &&
+          `${p.name} ${p.state.project_goal || ''}`.toLowerCase().includes(search.toLowerCase()) &&
           (filter === '全部项目' ||
             (filter === '运行中'
               ? active(p.status)
@@ -201,7 +201,7 @@ export function Projects() {
                 </div>
                 <h3>{p.name}</h3>
                 <p className="project-summary">
-                  {p.state.task_prompt || '研究空间已准备就绪，进入项目开始新的探索。'}
+                  {p.state.project_goal || '研究空间已准备就绪，进入项目开始新的探索。'}
                 </p>
                 <div className="project-phase">
                   <span>
