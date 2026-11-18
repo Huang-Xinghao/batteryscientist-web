@@ -27,7 +27,9 @@ const categoryLabels: Record<string, string> = {
   claims: '研究论断',
   figures: '图表资料',
 };
-const categoryName = (value: string) => categoryLabels[value] || value;
+const categoryName = (value: string) => value.split('/').map(part =>
+  ({ literature: '文献库', autoresearch: '自主研究', ...categoryLabels }[part] || part)
+).join(' / ');
 
 // Resolve links relative to the current document, including parent-directory links.
 function localResource(href: string, path: string) {

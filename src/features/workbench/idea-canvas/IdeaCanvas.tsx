@@ -45,6 +45,7 @@ import remarkGfm from 'remark-gfm';
 import { active, api, request } from '../../../api/client';
 import {
   affected,
+  hasRevisionChanges,
   blankModule,
   cleanDraft,
   exportDiscussion,
@@ -162,6 +163,16 @@ export default function IdeaCanvas(props: {
           setTracking(true);
           void saved.refetch();
         }}
+        onApplied={async () => {
+          await Promise.all([
+            source.refetch(),
+            saved.refetch(),
+            client.invalidateQueries({ queryKey: ['project', props.projectId] }),
+            client.invalidateQueries({ queryKey: ['files', props.projectId] }),
+            client.invalidateQueries({ queryKey: ['file', props.projectId, proposalPath] }),
+          ]);
+          setRefreshVersion((value) => value + 1);
+        }}
         status={saved.data}
         proposal={source.data.content || ''}
         sourceHash={source.data.sha256}
@@ -182,6 +193,7 @@ function CanvasEditor({
   viewSwitch,
   status,
   onOperation,
+  onApplied,
 }: {
   projectId: string;
   running: boolean;
@@ -192,6 +204,7 @@ function CanvasEditor({
   initial: CanvasResponse;
   status: CanvasResponse;
   onOperation: (id: string) => void;
+  onApplied: () => Promise<void>;
   viewSwitch: ReactNode;
 }) {
   const { message, modal } = App.useApp();
@@ -583,6 +596,10 @@ function CanvasEditor({
   }
   async function submitRevision() {
     if (running || saving || submitting || reviewFormChanged || formChanged || stale) return;
+    if (!hasRevisionChanges(draft)) {
+      message.info('请先修改方案或添加意见，再提交 Agent 修订');
+      return;
+    }
     setSubmitting(true);
     setSaveError('');
     try {
@@ -633,6 +650,7 @@ function CanvasEditor({
     });
   }
   const revision = serverStatus.revision;
+  const hasChanges = hasRevisionChanges(draft);
   const decisionCount = revision?.approved ? 0 : revision?.questions.length || 0;
   const canApprove =
     serverStatus.canApprove &&
@@ -641,6 +659,37 @@ function CanvasEditor({
     !formChanged &&
     !running &&
     !submitting;
+  const canApply =
+    serverStatus.canApply &&
+    !dirty &&
+    !reviewFormChanged &&
+    !formChanged &&
+    !running &&
+    !saving &&
+    !submitting;
+  function applyRevision() {
+    modal.confirm({
+      title: '采用修改版作为正式方案？',
+      content:
+        '将保存当前已修订版本及冻结副本，项目保持完成状态。后续需要实验规划时，可向主控提出要求。',
+      okText: '采用修改版',
+      async onOk() {
+        setSubmitting(true);
+        try {
+          await request(`/projects/${projectId}/idea-canvas/apply`, {
+            method: 'POST',
+            body: JSON.stringify({ sha256: hash }),
+          });
+          message.success('修改版已成为正式方案');
+          await onApplied();
+        } catch (error) {
+          setSaveError((error as Error).message);
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+  }
   const enabled = new Set(draft.nodes.filter((n) => !n.data.disabled).map((n) => n.id));
   const methodGraph = (
     <div className="idea-graph" ref={graph}>
@@ -874,7 +923,9 @@ function CanvasEditor({
                     : serverStatus.context === 'historical'
                       ? '当前查看历史提案：可以修订草稿；只有当前精炼检查点可批准交付。'
                       : serverStatus.context === 'auto'
-                        ? '自动模式保持原流程；此处修订草稿不会自动改写或重启研究。'
+                        ? serverStatus.canApply
+                          ? '修改版已就绪。复核后可采用为正式方案，项目保持完成状态。'
+                          : '自动模式：修改后提交 Agent 修订。已完成且尚未进入实验规划的方案可采用修改版。'
                         : decisionCount
                           ? `Agent 提出了 ${decisionCount} 个待决问题供你审阅；可补充意见后修订，也可批准当前方案进入实验规划。`
                           : dirty || !revision?.synced
@@ -913,6 +964,7 @@ function CanvasEditor({
                 reviewFormChanged ||
                 !!formChanged ||
                 stale ||
+                !hasChanges ||
                 (revision?.approved && revision.synced && !dirty)
               }
               onClick={() => void submitRevision()}
@@ -922,6 +974,11 @@ function CanvasEditor({
             {serverStatus.context === 'checkpoint' && (
               <Button aria-label="批准并进入实验规划" disabled={!canApprove} onClick={approve}>
                 批准并进入实验规划
+              </Button>
+            )}
+            {serverStatus.context === 'auto' && serverStatus.canApply && (
+              <Button disabled={!canApply} onClick={applyRevision}>
+                采用修改版
               </Button>
             )}
           </div>

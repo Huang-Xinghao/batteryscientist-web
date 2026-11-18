@@ -52,7 +52,7 @@ function metrics(channel: BtsChannel) {
 
 export function Laboratory() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'coin-cell' ? 'coin-cell' : 'bts';
+  const tab = ['land', 'coin-cell'].includes(params.get('tab') || '') ? params.get('tab')! : 'bts';
   return (
     <div className="page laboratory-page">
       <div className="page-heading">
@@ -78,6 +78,14 @@ export function Laboratory() {
             ),
           },
           {
+            key: 'land',
+            label: (
+              <span>
+                <ThunderboltOutlined /> 蓝电 LAND
+              </span>
+            ),
+          },
+          {
             key: 'coin-cell',
             label: (
               <span>
@@ -87,8 +95,8 @@ export function Laboratory() {
           },
         ]}
       />
-      {tab === 'bts' ? (
-        <BtsDashboard />
+      {tab === 'bts' || tab === 'land' ? (
+        <BtsDashboard key={tab} vendor={tab} />
       ) : (
         <section className="laboratory-placeholder" aria-label="自动化扣电">
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂未接入设备" />
@@ -121,7 +129,9 @@ function ChannelCard({
         </span>
         <span className="bts-status-dot" />
       </div>
-      <div className="bts-channel-state">{outdated ? '未更新' : channel.status_label}</div>
+      <div className="bts-channel-state">
+        {outdated && channel.observed_at ? '未更新' : channel.status_label}
+      </div>
       <dl className="bts-channel-metrics">
         {metrics(channel).map(([label, reading, unit]) => (
           <div key={label}>
@@ -152,7 +162,7 @@ function DevicePanel({
     a.localeCompare(b, undefined, { numeric: true }),
   );
   return (
-    <section className="bts-device" aria-label={`BTS 设备 ${device.device_id}`}>
+    <section className="bts-device" aria-label={`测试设备 ${device.device_id}`}>
       <header className="bts-device-header">
         <div className="bts-device-name">
           <span className="bts-device-icon">
@@ -192,15 +202,17 @@ function DevicePanel({
   );
 }
 
-function BtsDashboard() {
+function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
+  const brand = vendor === 'land' ? '蓝电 LAND' : '新威 BTS';
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [deviceId, setDeviceId] = useState('all');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const query = useQuery({
-    queryKey: ['laboratory', 'bts'],
-    queryFn: ({ signal }) => api.btsSnapshot(signal),
+    queryKey: ['laboratory', vendor],
+    queryFn: ({ signal }) =>
+      vendor === 'land' ? api.landSnapshot(signal) : api.btsSnapshot(signal),
     refetchInterval: autoRefresh ? 10000 : false,
     retry: false,
   });
@@ -230,22 +242,28 @@ function BtsDashboard() {
     ['通道总数', snapshot?.last_success_at ? allChannels.length : '—', '个'],
     [
       '运行中',
-      online ? allChannels.filter((c) => c.state === 'running' && !c.status_stale).length : '—',
+      online && snapshot?.status_available !== false
+        ? allChannels.filter((c) => c.state === 'running' && !c.status_stale).length
+        : '—',
       '个',
     ],
     [
       '已结束',
-      online ? allChannels.filter((c) => c.state === 'finished' && !c.status_stale).length : '—',
+      online && snapshot?.status_available !== false
+        ? allChannels.filter((c) => c.state === 'finished' && !c.status_stale).length
+        : '—',
       '个',
     ],
     [
       '异常通道',
-      online ? allChannels.filter((c) => c.state === 'error' && !c.status_stale).length : '—',
+      online && snapshot?.status_available !== false
+        ? allChannels.filter((c) => c.state === 'error' && !c.status_stale).length
+        : '—',
       '个',
     ],
   ];
   return (
-    <section className="bts-dashboard" aria-label="新威 BTS 监控">
+    <section className="bts-dashboard" aria-label={brand + ' 监控'}>
       <div className="bts-toolbar">
         <div className="bts-connection">
           <span className={`bts-connection-dot ${online ? 'online' : ''}`} />
@@ -253,12 +271,16 @@ function BtsDashboard() {
             {query.isPending
               ? '正在连接设备'
               : online
-                ? '设备已连接'
+                ? snapshot?.discovery_only
+                  ? '蓝电查询服务已连接'
+                  : '设备已连接'
                 : disconnected
                   ? '设备连接中断'
                   : '设备未连接'}
           </strong>
-          <span className="bts-monitor-label">通道监控</span>
+          <span className="bts-monitor-label">
+            {snapshot?.discovery_only ? '通道目录' : '通道监控'}
+          </span>
         </div>
         <div className="bts-refresh-tools">
           <Tooltip title="页面打开时每 10 秒刷新一次">
@@ -290,9 +312,11 @@ function BtsDashboard() {
           message={
             disconnected
               ? '实验室连接暂时不可用'
-              : snapshot?.stale
-                ? '部分数据未更新'
-                : '等待设备连接'
+              : snapshot?.discovery_only
+                ? '已发现通道，实时状态尚未接入'
+                : snapshot?.stale
+                  ? '部分数据未更新'
+                  : '等待设备连接'
           }
           description={
             query.isError
@@ -382,7 +406,7 @@ function BtsDashboard() {
                 description={
                   allChannels.length === 0
                     ? online
-                      ? 'BTS 已连接，尚未发现通道'
+                      ? (vendor === 'land' ? 'LAND' : 'BTS') + ' 已连接，尚未发现通道'
                       : '暂无可显示的设备通道'
                     : '没有匹配的通道'
                 }
@@ -391,7 +415,11 @@ function BtsDashboard() {
           )}
           <div className="bts-legend">
             <CheckCircleOutlined />{' '}
-            {disconnected ? '当前展示上次接收的数据' : '数据来自设备实时查询'}
+            {disconnected
+              ? '当前展示上次接收的数据'
+              : snapshot?.discovery_only
+                ? '通道来自蓝电软件目录查询，不代表设备在线或正在运行'
+                : '数据来自设备实时查询'}
             <span>点击通道查看详情</span>
             {allChannels.some((c) => c.status_stale || c.measurements_stale) && (
               <span className="bts-stale-label">部分通道为上次接收值或暂无数据</span>
@@ -413,7 +441,15 @@ function BtsDashboard() {
           <div className="bts-detail">
             <span className={`bts-detail-status state-${detail.state}`}>{detail.status_label}</span>
             {(stale || detail.status_stale || detail.measurements_stale) && (
-              <Alert type="warning" showIcon message="数据未更新，仅供查看上次接收状态" />
+              <Alert
+                type="warning"
+                showIcon
+                message={
+                  snapshot?.discovery_only
+                    ? '该通道已发现，实时状态与测量值尚不可用'
+                    : '数据未更新，仅供查看上次接收状态'
+                }
+              />
             )}
             <dl className="bts-detail-metrics">
               {metrics(detail).map(([label, reading, unit]) => (

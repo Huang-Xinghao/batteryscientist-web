@@ -260,9 +260,9 @@ test('terminal snapshot takes precedence over previous web run events', async ({
   );
 });
 
-test('auto-mode proposal revision retains the dedicated review entry', async ({ page }) => {
+test('auto-mode proposal does not present expert review controls', async ({ page }) => {
   await fixture(page, { running: false, mode: 'auto', proposal: true });
-  await expect(page.getByRole('button', { name: '前往方案审阅', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看方案问题', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('专家反馈')).toHaveCount(0);
 });
 
@@ -338,11 +338,15 @@ test('Wiki progress streams public text and preserves the original user request'
   await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);
   await expect(page.getByText('旧请求残片', { exact: true })).toHaveCount(0);
   await expect(page.getByText('内部推理不展示', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.user-message')).toHaveCount(0);
+  await page.getByRole('button', { name: '查看主控 Agent', exact: true }).click();
   await expect(page.locator('.user-message')).toContainText(original);
   await expect(page.locator('.user-message')).not.toContainText(goal);
   await page.getByText('主控整理的研究目标', { exact: true }).click();
   await expect(page.locator('.research-goal')).toContainText(goal);
   await expect(page.getByRole('textbox', { name: '研究指令', exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: '查看Wiki Agent', exact: true }).click();
+  await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);
   await page.screenshot({ path: 'artifacts/wiki-live-progress.png', fullPage: true });
   finished = true;
   await page.reload();
@@ -391,4 +395,65 @@ test('slow operations show stages elapsed time and evidence activity after refre
   await expect(progress).toContainText('已完成 4 次证据检查');
   await page.reload();
   await expect(progress).toContainText('审阅者正在核查证据');
+});
+
+test('each role loads its own older messages and operations after switching and refresh', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.route('**/api/projects/*/activity*', (route) => {
+    const url = new URL(route.request().url());
+    const role = url.searchParams.get('role');
+    const before = url.searchParams.has('before');
+    const after = url.searchParams.has('after');
+    const records =
+      role === 'paper_writer'
+        ? before
+          ? [{ id: 1, kind: 'assistant_output', data: { role, content: '论文角色更早的历史消息' } }]
+          : [
+              {
+                id: 2,
+                kind: 'tool_end',
+                data: {
+                  role,
+                  phase: 'paper_write',
+                  tool: 'Read',
+                  content: '读取论文历史证据',
+                  is_error: false,
+                },
+              },
+            ]
+        : [
+            {
+              id: 500,
+              kind: 'assistant_output',
+              data: { role: 'experiment', content: '实验角色最近的记录' },
+            },
+          ];
+    return route.fulfill({
+      json: {
+        has_more: role === 'paper_writer' && !before && !after,
+        events: after
+          ? []
+          : records.map((event) => ({
+              ...event,
+              run_id: 'role-run',
+              created_at: '2026-11-13T08:00:00Z',
+            })),
+      },
+    });
+  });
+  await page.getByRole('button', { name: '查看论文 Agent', exact: true }).click();
+  await expect(page.locator('.tool-activity')).toContainText('Read');
+  await expect(page.getByText('实验角色最近的记录', { exact: true })).toBeHidden();
+  await page.getByRole('button', { name: '加载更早的执行记录' }).click();
+  await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '查看实验 Agent', exact: true }).click();
+  await expect(page.getByText('实验角色最近的记录', { exact: true })).toBeVisible();
+  await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeHidden();
+  await page.reload();
+  await page.getByRole('button', { name: '查看论文 Agent', exact: true }).click();
+  await expect(page.locator('.tool-activity')).toContainText('Read');
+  await page.getByRole('button', { name: '加载更早的执行记录' }).click();
+  await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeVisible();
 });

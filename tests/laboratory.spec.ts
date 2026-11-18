@@ -172,3 +172,65 @@ test('automatic refresh can be paused', async ({ page }) => {
   await page.clock.fastForward(22000);
   expect(calls).toBe(paused);
 });
+
+test('LAND discovery is distinct from BTS and never implies live measurements', async ({
+  page,
+}) => {
+  const land = {
+    ...snapshot(),
+    discovery_only: true,
+    status_available: false,
+    measurements_available: false,
+    stale: true,
+    message: '已读取蓝电通道目录；通道在线情况、实时运行状态和测量值尚未接入。',
+    devices: [
+      {
+        id: 'local/LAND/windows',
+        device_id: 'windows',
+        device_type: 'LAND',
+        channels: Array.from({ length: 80 }, (_, i) => ({
+          channel_id: 'local/LAND/windows/' + (Math.floor(i / 8) + 3) + '/' + ((i % 8) + 1),
+          unit_id: String(Math.floor(i / 8) + 3),
+          number: String((i % 8) + 1),
+          status: 'unknown',
+          state: 'unknown',
+          status_label: '未知',
+          status_stale: true,
+          measurements_stale: true,
+          observed_at: null,
+          voltage_v: null,
+          current_a: null,
+          capacity_ah: null,
+          energy_wh: null,
+          cycle: null,
+          step_type: null,
+        })),
+      },
+    ],
+  };
+  await page.route('**/api/laboratory/bts', (route) => route.fulfill({ json: snapshot() }));
+  await page.route('**/api/laboratory/land', (route) => route.fulfill({ json: land }));
+  await page.goto('/laboratory');
+  await expect(page.locator('.bts-channel')).toHaveCount(40);
+  await page.getByRole('tab', { name: '蓝电 LAND' }).click();
+  await expect(page).toHaveURL(/tab=land/);
+  await expect(page.getByText('蓝电查询服务已连接', { exact: true })).toBeVisible();
+  await expect(page.locator('.bts-channel')).toHaveCount(80);
+  await expect(page.locator('.bts-channel').first()).toContainText('未知');
+  await expect(page.locator('.bts-channel').first()).toContainText('\u2014');
+  await expect(page.locator('.bts-stat').filter({ hasText: '运行中' })).toContainText('\u2014');
+  await page.locator('.bts-channel').first().click();
+  await expect(page.getByText('该通道已发现，实时状态与测量值尚不可用')).toBeVisible();
+  await page.getByRole('button', { name: '关闭', exact: true }).click();
+  await page.reload();
+  await expect(page.getByRole('tab', { name: '蓝电 LAND' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.locator('.bts-channel')).toHaveCount(80);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: 'artifacts/laboratory-land-mobile.png', fullPage: true });
+  await page.getByRole('tab', { name: '新威 BTS' }).click();
+  await expect(page.locator('.bts-channel')).toHaveCount(40);
+});

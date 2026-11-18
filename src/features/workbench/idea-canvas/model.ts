@@ -61,8 +61,21 @@ export type CanvasResponse = {
     progress?: { stage: string; receivedChars: number; updatedAt: string };
   } | null;
   canApprove?: boolean;
+  canApply?: boolean;
   context?: 'checkpoint' | 'auto' | 'historical' | 'unavailable';
 };
+
+export function hasRevisionChanges(draft: CanvasDraft) {
+  if (draft.review?.feedback.trim() || draft.review?.sections.some((section) => section.edited))
+    return true;
+  const lastRevision = draft.changes.reduce(
+    (last, change, index) => (change.startsWith('Agent 统一修订：') ? index : last),
+    -1,
+  );
+  return draft.changes
+    .slice(lastRevision + 1)
+    .some((change) => change !== '已按提案标题整理候选模块，模块职责与连接关系待人工核对。');
+}
 
 export function blankModule(title = '新模块'): ModuleData {
   return {

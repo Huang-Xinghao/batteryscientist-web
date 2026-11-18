@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, type ActivityEvent } from '../../api/client';
+import { eventMatches, type AgentRole } from './agents';
 
-export function useActivity(projectId: string) {
+export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', enabled = true) {
   const client = useQueryClient();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [connection, setConnection] = useState('connecting');
@@ -23,6 +24,7 @@ export function useActivity(projectId: string) {
     setLoadingOlder(false);
     setConnection('connecting');
     setError('');
+    if (!enabled) return;
     function refresh() {
       if (refreshTimer) return;
       refreshTimer = setTimeout(() => {
@@ -35,9 +37,14 @@ export function useActivity(projectId: string) {
       if (disposed || generation.current !== current) return;
       cursor = Math.max(cursor, ...incoming.map((event) => event.id));
       setEvents((previous) =>
-        [...new Map([...previous, ...incoming].map((event) => [event.id, event])).values()].sort(
-          (a, b) => a.id - b.id,
-        ),
+        [
+          ...new Map(
+            [...previous, ...incoming.filter((event) => eventMatches(event, role))].map((event) => [
+              event.id,
+              event,
+            ]),
+          ).values(),
+        ].sort((a, b) => a.id - b.id),
       );
       if (incoming.length) refresh();
     }
@@ -47,7 +54,10 @@ export function useActivity(projectId: string) {
       try {
         let more = true;
         while (more && !disposed) {
-          const page = await api.activity(projectId, initialized ? { after: cursor } : {});
+          const page = await api.activity(projectId, {
+            ...(initialized ? { after: cursor } : {}),
+            ...(role === 'all' ? {} : { role }),
+          });
           if (disposed) return;
           if (!initialized) {
             setHasOlder(page.has_more);
@@ -87,14 +97,17 @@ export function useActivity(projectId: string) {
       clearInterval(interval);
       if (refreshTimer) clearTimeout(refreshTimer);
     };
-  }, [projectId, client]);
+  }, [projectId, client, role, enabled]);
 
   async function loadOlder() {
     if (loadingOlder || !events.length) return;
     const current = generation.current;
     setLoadingOlder(true);
     try {
-      const page = await api.activity(projectId, { before: events[0].id });
+      const page = await api.activity(projectId, {
+        before: events[0].id,
+        ...(role === 'all' ? {} : { role }),
+      });
       if (generation.current !== current) return;
       setEvents((previous) =>
         [...new Map([...page.events, ...previous].map((event) => [event.id, event])).values()].sort(

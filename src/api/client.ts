@@ -95,6 +95,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 export const api = {
+  landSnapshot: (signal?: AbortSignal) => request<BtsSnapshot>('/laboratory/land', { signal }),
   btsSnapshot: (signal?: AbortSignal) => request<BtsSnapshot>('/laboratory/bts', { signal }),
   paradigmGraph: () => request<ParadigmGraph>('/libraries/paradigms/graph'),
   paradigmFigures: () => request<LibraryFigures>('/libraries/paradigms/figures'),
@@ -141,7 +142,7 @@ export const api = {
       body: JSON.stringify({ content, sha256 }),
     }),
   log: (id: string) => request<{ content: string }>(`/projects/${id}/log`),
-  activity: (id: string, cursor: { before?: number; after?: number } = {}) =>
+  activity: (id: string, cursor: { before?: number; after?: number; role?: string } = {}) =>
     request<ActivityPage>(
       `/projects/${id}/activity?${new URLSearchParams(
         Object.entries(cursor).map(([key, value]) => [key, String(value)]),

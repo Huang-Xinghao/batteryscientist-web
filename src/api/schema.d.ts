@@ -141,6 +141,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/proposal-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Proposal Overview */
+        get: operations["read_proposal_overview_api_projects__project_id__proposal_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/idea-canvas/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Canvas
+         * @description Adopt a reviewed automatic-mode design without starting downstream work.
+         */
+        post: operations["apply_canvas_api_projects__project_id__idea_canvas_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/idea-canvas": {
         parameters: {
             query?: never;
@@ -168,6 +205,23 @@ export interface paths {
         };
         /** Bts Snapshot */
         get: operations["bts_snapshot_api_laboratory_bts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/laboratory/land": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Land Snapshot */
+        get: operations["land_snapshot_api_laboratory_land_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -531,6 +585,26 @@ export interface components {
             message: string | null;
             /** Devices */
             devices: components["schemas"]["BtsDeviceView"][];
+            /**
+             * Discovery Only
+             * @default false
+             */
+            discovery_only: boolean;
+            /**
+             * Status Available
+             * @default true
+             */
+            status_available: boolean;
+            /**
+             * Measurements Available
+             * @default true
+             */
+            measurements_available: boolean;
+        };
+        /** CanvasApply */
+        CanvasApply: {
+            /** Sha256 */
+            sha256: string;
         };
         /** CanvasDraft */
         CanvasDraft: {
@@ -1164,6 +1238,72 @@ export interface operations {
             };
         };
     };
+    read_proposal_overview_api_projects__project_id__proposal_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_canvas_api_projects__project_id__idea_canvas_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CanvasApply"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_canvas_api_projects__project_id__idea_canvas_get: {
         parameters: {
             query?: never;
@@ -1231,6 +1371,26 @@ export interface operations {
         };
     };
     bts_snapshot_api_laboratory_bts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BtsSnapshotView"];
+                };
+            };
+        };
+    };
+    land_snapshot_api_laboratory_land_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1690,6 +1850,7 @@ export interface operations {
     activity_api_projects__project_id__activity_get: {
         parameters: {
             query?: {
+                role?: string | null;
                 before?: number | null;
                 after?: number | null;
                 limit?: number;

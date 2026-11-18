@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useState, type CSSProperties } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Image, Segmented, Select, Skeleton, Space, Spin } from 'antd';
@@ -13,61 +13,20 @@ import Editor from './SafeEditor';
 import { PaneDivider } from '../../shared/file-preview/PaneDivider';
 import { isImagePath } from '../../shared/file-preview/display';
 import { siblingImages } from '../../shared/file-preview/siblingImages';
-const IdeaCanvas = lazy(() => import('./idea-canvas/IdeaCanvas'));
+const ModelProposal = lazy(() => import('./ModelProposal'));
 
 export function Artifact(
-  props: Parameters<typeof FileArtifact>[0] & { reviewRequest?: number; workflowStage?: string },
+  props: Parameters<typeof FileArtifact>[0] & {
+    reviewRequest?: number;
+    workflowStage?: string;
+    collaborationMode?: 'auto' | 'expert';
+  },
 ) {
-  const [canvas, setCanvas] = useState(true);
-  useEffect(() => {
-    if (props.reviewRequest !== undefined) setCanvas(true);
-  }, [props.reviewRequest]);
-  const dirty = useRef(false);
-  const { message } = App.useApp();
   if (props.path !== 'refine-logs/FINAL_PROPOSAL.md') return <FileArtifact {...props} />;
-  const viewSwitch = (
-    <Button
-      size="small"
-      onClick={() => {
-        if (dirty.current) {
-          message.info('请先保存或撤销当前修改，再切换视图');
-          return;
-        }
-        window.speechSynthesis?.cancel();
-        setCanvas(!canvas);
-      }}
-    >
-      {canvas ? '原提案' : '返回方案审阅'}
-    </Button>
-  );
   return (
-    <div className="idea-artifact-host">
-      {!canvas && <div className="idea-view-switch">{viewSwitch}</div>}
-      <div className="idea-view-content">
-        {canvas ? (
-          <Suspense fallback={<Spin className="editor-loading" />}>
-            <IdeaCanvas
-              viewSwitch={viewSwitch}
-              projectId={props.projectId}
-              running={props.running}
-              workflowStage={props.workflowStage}
-              onDirtyChange={(value) => {
-                dirty.current = value;
-                props.onDirtyChange(value);
-              }}
-            />
-          </Suspense>
-        ) : (
-          <FileArtifact
-            {...props}
-            onDirtyChange={(value) => {
-              dirty.current = value;
-              props.onDirtyChange(value);
-            }}
-          />
-        )}
-      </div>
-    </div>
+    <Suspense fallback={<Spin className="editor-loading" />}>
+      <ModelProposal projectId={props.projectId} onDirtyChange={props.onDirtyChange} />
+    </Suspense>
   );
 }
 
@@ -77,12 +36,14 @@ function FileArtifact({
   running,
   onDirtyChange,
   files,
+  initialMode,
 }: {
   projectId: string;
   path: string;
   running: boolean;
   files: ProjectFile[];
   onDirtyChange: (dirty: boolean) => void;
+  initialMode?: '预览' | '编辑';
 }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
@@ -92,7 +53,7 @@ function FileArtifact({
   const images = siblingImages(path, files);
   const [imagePreview, setImagePreview] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
-  const [mode, setMode] = useState(inlineEdit ? '编辑' : '预览');
+  const [mode, setMode] = useState<string>(initialMode || (inlineEdit ? '编辑' : '预览'));
   const [baseContent, setBaseContent] = useState('');
   const [saveError, setSaveError] = useState('');
   const [draft, setDraft] = useState('');
@@ -121,20 +82,19 @@ function FileArtifact({
   const stalePdf = savedSource || (pdf && source && source.modified > pdf.modified);
 
   useEffect(() => {
-    setMode(inlineEdit ? '编辑' : '预览');
+    setMode(initialMode || (inlineEdit ? '编辑' : '预览'));
     setPdfPath('');
     setSavedSource(false);
     setDraft('');
     setBaseHash('');
     setBaseContent('');
     setSaveError('');
-  }, [path, projectId, inlineEdit]);
+  }, [path, projectId, inlineEdit, initialMode]);
   useEffect(() => {
     if (!inlineEdit || !file.data?.editable || dirty) return;
     setDraft(file.data.content || '');
     setBaseContent(file.data.content || '');
     setBaseHash(file.data.sha256 || '');
-    setMode('编辑');
   }, [inlineEdit, file.data, dirty, mode]);
   const save = useMutation({
     mutationFn: (snapshot: string) => {

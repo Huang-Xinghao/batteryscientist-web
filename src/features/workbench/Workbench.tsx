@@ -64,7 +64,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const [tab, setTab] = useState('report');
   const [mobilePane, setMobilePane] = useState(ideaCanvasOpen ? 'workspace' : 'conversation');
   const [maximized, setMaximized] = useState(false);
-  const [reviewRequest, setReviewRequest] = useState(0);
+  const [reviewRequest, setReviewRequest] = useState(ideaCanvasOpen ? 1 : 0);
   const [chatWidth, setChatWidth] = useState(38);
   const [userResized, setUserResized] = useState(false);
   const dirtyRef = useRef(false);
@@ -156,7 +156,20 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     p.state.current_node ||
     nodes[0]?.id;
   const completedNodes = new Set(p.state.history?.map((entry) => entry.node));
-  const defaultFile = checkpoint?.node === currentNode ? checkpoint.report : reports[currentNode];
+  // Keep the automatic model handoff visible while downstream work runs.
+  // Explicit file selections still take precedence; completed papers open normally.
+  const showAutoProposal =
+    p.state.mode === 'auto' &&
+    running &&
+    completedNodes.has('refine') &&
+    !completedNodes.has('paper_write') &&
+    fileList.some((entry) => entry.path === reports.refine);
+  const defaultFile =
+    checkpoint?.node === currentNode
+      ? checkpoint.report
+      : showAutoProposal
+        ? reports.refine
+        : reports[currentNode];
   const file =
     selectedFile || (fileList.some((entry) => entry.path === defaultFile) ? defaultFile : '');
   const latexOpen = /\.tex$/i.test(file) && tab === 'report';
@@ -220,14 +233,14 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
               size="small"
               onClick={() => {
                 if (dirtyRef.current) {
-                  message.info('请先保存或撤销当前修改，再打开方案审阅');
+                  message.info('请先保存或撤销当前修改，再查看方案');
                   return;
                 }
                 openFile(reports.refine, 'refine');
                 setReviewRequest((value) => value + 1);
               }}
             >
-              审阅方案
+              查看方案
             </Button>
           )}
           <Button size="small" icon={<ClockCircleOutlined />} onClick={() => setActivityOpen(true)}>
@@ -306,7 +319,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           onOpen={openFile}
           onReviewProposal={() => {
             if (dirtyRef.current) {
-              message.info('请先应用并保存，或撤销当前修改，再打开方案审阅');
+              message.info('请先应用并保存，或撤销当前修改，再查看方案');
               return;
             }
             openFile(reports.refine, 'refine');
@@ -457,6 +470,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                     <Artifact
                       key={`${id}:${file}`}
                       reviewRequest={reviewRequest}
+                      collaborationMode={p.state.mode === 'auto' ? 'auto' : 'expert'}
                       projectId={id}
                       path={file}
                       running={running}

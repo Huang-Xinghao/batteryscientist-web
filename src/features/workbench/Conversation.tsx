@@ -41,6 +41,7 @@ import {
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
+import { useActivity } from './useActivity';
 
 function visibleText(value: unknown) {
   return typeof value === 'string'
@@ -96,12 +97,20 @@ export function Conversation({
   const [atBottom, setAtBottom] = useState(true);
   const [agentFilter, setAgentFilter] = useState<AgentFilter>('follow');
   const visibleRole = visibleAgent(project, events, agentFilter);
+  const roleHistory = useActivity(project.id, visibleRole, visibleRole !== 'all');
+  // Keep the global stream for actor tracking; page each role's history independently.
+  const historyEvents = visibleRole === 'all' ? events : roleHistory.events;
+  const historyHasOlder = visibleRole === 'all' ? hasOlder : roleHistory.hasOlder;
+  const historyLoadingOlder = visibleRole === 'all' ? loadingOlder : roleHistory.loadingOlder;
+  const loadHistory = visibleRole === 'all' ? loadOlder : roleHistory.loadOlder;
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<import('antd').InputRef>(null);
   const stick = useRef(true);
   const running = active(project.status);
   const checkpoint =
-    project.status === 'awaiting_user' ? project.state.expert_checkpoint : undefined;
+    project.status === 'awaiting_user' && project.state.mode === 'expert'
+      ? project.state.expert_checkpoint
+      : undefined;
   const reviewingProposal = checkpoint?.node === 'refine';
   const questions = checkpoint?.questions || [];
   const checkpointKey = JSON.stringify([
@@ -128,7 +137,7 @@ export function Conversation({
   useEffect(() => {
     if (stick.current && scroller.current)
       scroller.current.scrollTop = scroller.current.scrollHeight;
-  }, [events, project.status, project.runs.length]);
+  }, [events, historyEvents, visibleRole, project.status, project.runs.length]);
   async function send() {
     if (pending || tooLong || (!checkpoint && !text.trim())) return;
     try {
@@ -156,14 +165,14 @@ export function Conversation({
     }
   }
   const completedTools = new Set(
-    events
+    historyEvents
       .filter((event) => event.kind === 'tool_end' && event.data.call_id)
       .map(
         (event) =>
           `${event.run_id}:${event.data.phase}:${event.data.iteration}:${event.data.call_id}`,
       ),
   );
-  const eventViews = conversationEvents(events).filter((event) => {
+  const eventViews = conversationEvents(historyEvents).filter((event) => {
     if (!eventMatches(event, visibleRole)) return false;
     if (event.kind === 'conversation_turn' && event.data.run_id) return false;
     if (
@@ -191,7 +200,7 @@ export function Conversation({
       return false;
     return true;
   });
-  const turns = project.runs
+  const turns = (visibleRole === 'all' || visibleRole === 'main' ? project.runs : [])
     .filter(
       (run) =>
         run.options.action === 'review' ||
@@ -219,7 +228,9 @@ export function Conversation({
   const persistedStages = [
     ...new Set((project.state.history || []).map((entry) => entry.node).filter(Boolean)),
   ];
-  const showHistory = !events.some((event) => event.kind === 'node_end');
+  const showHistory =
+    (visibleRole === 'all' || visibleRole === 'main') &&
+    !historyEvents.some((event) => event.kind === 'node_end');
   const initialPromptShown = turns.some((turn) => turn.text === project.state.project_goal);
   const actor = currentActor(project, events);
   const operation = activeOperation(project);
@@ -290,15 +301,15 @@ export function Conversation({
         }}
       >
         <div className="conversation-messages">
-          {hasOlder && (
+          {historyHasOlder && (
             <Button
               type="text"
               block
-              loading={loadingOlder}
+              loading={historyLoadingOlder}
               onClick={async () => {
                 const height = scroller.current?.scrollHeight || 0;
                 stick.current = false;
-                await loadOlder();
+                await loadHistory();
                 requestAnimationFrame(() => {
                   if (scroller.current)
                     scroller.current.scrollTop += scroller.current.scrollHeight - height;
@@ -308,13 +319,15 @@ export function Conversation({
               加载更早的执行记录
             </Button>
           )}
-          {project.state.project_goal && !initialPromptShown && (
-            <details className="research-goal">
-              <summary>主控整理的研究目标</summary>
-              <p>{project.state.project_goal}</p>
-              <small>由主控根据研究指令整理，原始指令保留在对话中。</small>
-            </details>
-          )}
+          {(visibleRole === 'all' || visibleRole === 'main') &&
+            project.state.project_goal &&
+            !initialPromptShown && (
+              <details className="research-goal">
+                <summary>主控整理的研究目标</summary>
+                <p>{project.state.project_goal}</p>
+                <small>由主控根据研究指令整理，原始指令保留在对话中。</small>
+              </details>
+            )}
           {!project.state.project_goal && !timeline.length && (
             <div className="conversation-welcome">
               <span className="agent-symbol">✦</span>
@@ -556,7 +569,7 @@ export function Conversation({
                 <span className="agent-symbol">✦</span> Paper Agent <small>等待你的判断</small>
               </div>
               <div className="review-heading">
-                <h3>{reviewingProposal ? '请审阅研究方案' : '一起确定下一步'}</h3>
+                <h3>{reviewingProposal ? '请确认模型方案' : '一起确定下一步'}</h3>
                 {!reviewingProposal && questions.length > 0 && (
                   <span>
                     已回答 {answered} / {questions.length}
@@ -566,11 +579,8 @@ export function Conversation({
               <p className="review-summary">{checkpoint.summary}</p>
               {reviewingProposal ? (
                 <>
-                  <p>
-                    在方案总览中集中修改，提交 Agent
-                    统一修订并检查关联影响；满意后再批准进入实验规划。
-                  </p>
-                  <Button onClick={onReviewProposal}>打开方案审阅</Button>
+                  <p>查看模型输入、架构和输出，在方案下方回答问题后继续。</p>
+                  <Button onClick={onReviewProposal}>查看方案</Button>
                 </>
               ) : (
                 <div className="review-question-list">
@@ -651,12 +661,12 @@ export function Conversation({
               description={project.runs[0]?.error || project.state.error}
             />
           )}
-          {activityError && (
+          {(activityError || roleHistory.error) && (
             <Alert
               type="warning"
               showIcon
               message="执行记录暂时未同步，正在重试"
-              description={activityError}
+              description={activityError || roleHistory.error}
             />
           )}
         </div>
@@ -677,9 +687,9 @@ export function Conversation({
         {reviewingProposal ? (
           <>
             <Button type="primary" block onClick={onReviewProposal}>
-              前往方案审阅
+              查看方案问题
             </Button>
-            <p className="composer-hint">修改、Agent 修订、复审和批准都在同一页完成。</p>
+            <p className="composer-hint">在方案下方回答问题并继续。</p>
           </>
         ) : (
           <>
