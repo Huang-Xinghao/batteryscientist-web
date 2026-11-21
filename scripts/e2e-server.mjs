@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-const root = await mkdtemp(join(tmpdir(), 'paper-agent-e2e-'));
+const root = await mkdtemp(join(tmpdir(), 'batteryscientist-e2e-'));
 const projects = join(root, 'projects');
 const project = join(projects, 'battery-study');
 const wiki = join(root, 'wiki');
@@ -89,20 +89,20 @@ await writeFile(
   ),
 );
 const python =
-  process.env.PAPER_AGENT_RUNTIME_PYTHON || '/data/apps/micromamba/envs/xinghao/bin/python';
+  process.env.BATTERYSCIENTIST_RUNTIME_PYTHON || '/data/apps/micromamba/envs/xinghao/bin/python';
 const backend =
-  process.env.PAPER_AGENT_BACKEND_DIR ||
-  fileURLToPath(new URL('../../paper-agent', import.meta.url));
-const child = spawn(python, ['-m', 'paper_agent.api.app'], {
+  process.env.BATTERYSCIENTIST_BACKEND_DIR ||
+  fileURLToPath(new URL('../../batteryscientist', import.meta.url));
+const child = spawn(python, ['-m', 'batteryscientist.api.app'], {
   cwd: backend,
   stdio: 'inherit',
   env: {
     ...process.env,
-    PAPER_AGENT_PROJECT_ROOTS: projects,
-    PAPER_AGENT_WEB_DATA: join(root, 'metadata'),
-    PAPER_AGENT_API_PORT: process.env.PAPER_AGENT_E2E_API_PORT || '8001',
-    PAPER_AGENT_WIKI_ROOT: wiki,
-    PAPER_AGENT_BATTERY_ROOT: battery,
+    BATTERYSCIENTIST_PROJECT_ROOTS: projects,
+    BATTERYSCIENTIST_WEB_DATA: join(root, 'metadata'),
+    BATTERYSCIENTIST_API_PORT: process.env.BATTERYSCIENTIST_E2E_API_PORT || '8001',
+    BATTERYSCIENTIST_WIKI_ROOT: wiki,
+    BATTERYSCIENTIST_BATTERY_ROOT: battery,
   },
 });
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => child.kill(signal));

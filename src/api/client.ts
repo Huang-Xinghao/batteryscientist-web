@@ -16,9 +16,10 @@ export type FileContent = {
 };
 export type RunInput = import('./schema').components['schemas']['RunCreate'];
 export type Health = Schemas['HealthView'];
-export type BtsSnapshot = Schemas['BtsSnapshotView'];
-export type BtsChannel = Schemas['BtsChannelView'];
-export type BtsDevice = Schemas['BtsDeviceView'];
+export type LaboratorySnapshot = Schemas['SnapshotView'];
+export type LaboratoryChannel = Schemas['ChannelView'];
+export type LaboratoryDevice = Schemas['DeviceView'];
+export type LaboratorySource = Schemas['SourceView'];
 export type ActivityEvent = {
   id: number;
   project_id: string;
@@ -95,8 +96,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 export const api = {
-  landSnapshot: (signal?: AbortSignal) => request<BtsSnapshot>('/laboratory/land', { signal }),
-  btsSnapshot: (signal?: AbortSignal) => request<BtsSnapshot>('/laboratory/bts', { signal }),
+  laboratorySources: (signal?: AbortSignal) =>
+    request<LaboratorySource[]>('/laboratory/sources', { signal }),
+  laboratorySnapshot: (sourceId: string, signal?: AbortSignal) =>
+    request<LaboratorySnapshot>(`/laboratory/sources/${encodeURIComponent(sourceId)}/snapshot`, {
+      signal,
+    }),
   paradigmGraph: () => request<ParadigmGraph>('/libraries/paradigms/graph'),
   paradigmFigures: () => request<LibraryFigures>('/libraries/paradigms/figures'),
   library: (kind: LibraryKind, q = '', category = '') =>

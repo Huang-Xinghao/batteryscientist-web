@@ -45,7 +45,7 @@ async function mockCoordinatorReply(page: import('@playwright/test').Page) {
                 data: {
                   role: 'main',
                   phase: 'coordinator',
-                  content: '我是 Paper Agent，由主控协调研究任务。',
+                  content: '我是 BatteryScientist，由主控协调研究任务。',
                 },
                 created_at: new Date().toISOString(),
               },
@@ -515,7 +515,7 @@ test('new project sends questions to the coordinator and replays saved chat on r
   await page.getByRole('button', { name: '发送研究指令' }).click();
   await expect(draft).toHaveValue('');
   await expect(
-    page.locator('.chat-markdown').filter({ hasText: '我是 Paper Agent' }),
+    page.locator('.chat-markdown').filter({ hasText: '我是 BatteryScientist' }),
   ).toBeVisible();
   await expect(page.getByText('运行请求已提交')).toHaveCount(0);
   const id = url.split('/').pop();
@@ -525,7 +525,7 @@ test('new project sends questions to the coordinator and replays saved chat on r
   await page.reload();
   await expect(page.locator('.user-message').filter({ hasText: '你是谁？' })).toBeVisible();
   await expect(
-    page.locator('.chat-markdown').filter({ hasText: '我是 Paper Agent' }),
+    page.locator('.chat-markdown').filter({ hasText: '我是 BatteryScientist' }),
   ).toBeVisible();
   await page.unrouteAll({ behavior: 'wait' });
 });
@@ -579,10 +579,10 @@ test('message copy and reuse protect an existing composer draft', async ({ page,
   await draft.fill('你是谁？');
   await page.getByRole('button', { name: '发送研究指令' }).click();
   const reply = page.locator('.agent-message').filter({ has: page.locator('.chat-markdown') });
-  await expect(reply).toContainText('我是 Paper Agent');
+  await expect(reply).toContainText('我是 BatteryScientist');
   await reply.getByRole('button', { name: '复制消息', exact: true }).click();
   await expect(reply.getByRole('button', { name: '消息已复制' })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('我是 Paper Agent');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('我是 BatteryScientist');
   await draft.fill('保留这条未发送的指令');
   await page.getByRole('button', { name: '修改这条指令' }).click();
   await expect(page.getByRole('dialog')).toContainText('替换输入框中未发送的草稿？');

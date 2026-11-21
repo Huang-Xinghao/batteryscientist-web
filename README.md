@@ -1,16 +1,16 @@
-# Paper Agent Web
+# BatteryScientist Web
 
-与 `../paper-agent` 平级的科研工作台。React + TypeScript + Vite + Ant Design，FastAPI 服务层位于后端 `paper_agent/api/`。研究状态及产物继续保存在原项目目录，SQLite 只保存项目登记、Web 运行记录与事件。
+与 `../batteryscientist` 平级的科研工作台。React + TypeScript + Vite + Ant Design，FastAPI 服务层位于后端 `batteryscientist/api/`。研究状态及产物继续保存在原项目目录，SQLite 只保存项目登记、Web 运行记录与事件。
 
 ## 启动
 
 需要 Node.js >=22.12，建议 npm >=9.5。当前机器已有的 npm 9.2 已完成安装及构建验证，但部分开发依赖声明要求更新版本。
 
 ```bash
-cd /home/xinghaohuang/paper-agent
+cd /home/xinghaohuang/batteryscientist
 /data/apps/micromamba/envs/xinghao/bin/python -m pip install -e '.[web,test]'
 
-cd /home/xinghaohuang/paper-agent-web
+cd /home/xinghaohuang/batteryscientist-web
 npm ci
 npm run dev:all
 ```
@@ -23,7 +23,7 @@ npm run dev:all
 ssh -L 5173:127.0.0.1:5173 your-server
 ```
 
-Vite 的代理目标使用启动进程环境变量 `PAPER_AGENT_API_URL`；例如 `PAPER_AGENT_API_URL=http://127.0.0.1:8002 npm run dev`。后端路径由 `PAPER_AGENT_BACKEND_DIR` 指定，运行解释器由 `PAPER_AGENT_RUNTIME_PYTHON` 指定，默认沿用项目的 xinghao 环境。
+Vite 的代理目标使用启动进程环境变量 `BATTERYSCIENTIST_API_URL`；例如 `BATTERYSCIENTIST_API_URL=http://127.0.0.1:8002 npm run dev`。后端路径由 `BATTERYSCIENTIST_BACKEND_DIR` 指定，运行解释器由 `BATTERYSCIENTIST_RUNTIME_PYTHON` 指定，默认沿用项目的 xinghao 环境。
 
 ## 当前功能
 
@@ -75,7 +75,7 @@ Web 运行采用全局单项目并发策略，项目内并发交给已有实验�
 
 实验页目前展示任务定义，完成状态仍应结合 tracker、日志和回执确认。Wiki 图谱、多用户、跨项目 GPU 调度、配置编辑和指标对比为后续扩展。
 
-后端管理数据默认位于 `../paper-agent/.paper-agent/web/`。备份时一并保存该目录和研究项目文件；这部分数据不是前端构建产物。
+后端管理数据默认位于 `../batteryscientist/.batteryscientist/web/`。备份时一并保存该目录和研究项目文件；这部分数据不是前端构建产物。
 
 ## 当前公网部署
 
@@ -83,18 +83,18 @@ Web 运行采用全局单项目并发策略，项目内并发交给已有实验�
 - `/api/*` 通过 Vercel 外部 rewrite 转发到 `https://api.xora.top/api/*`，浏览器保持同源请求。
 - 后端：Cloudflare Tunnel → `127.0.0.1:8000`；隧道重写 Host 为 `localhost`。
 - 单用户登录：scrypt 密码摘要、12 小时服务端会话、HttpOnly/Secure/SameSite Cookie、登录限速、Origin 校验。下载、日志、事件流及 API 文档同样受保护。
-- 配置和凭据：`~/.config/paper-agent/`；初始登录信息位于该目录下的 `login.txt`，仅所有者可读。不要提交或发送 Tunnel 凭据。
-- 服务：`paper-agent-api.service`、`paper-agent-tunnel.service`，均为用户 systemd 服务；已启用 linger。
+- 配置和凭据：`~/.config/batteryscientist/`；初始登录信息位于该目录下的 `login.txt`，仅所有者可读。不要提交或发送 Tunnel 凭据。
+- 服务：`batteryscientist-api.service`、`batteryscientist-tunnel.service`，均为用户 systemd 服务；已启用 linger。
 
 ```bash
-systemctl --user status paper-agent-api paper-agent-tunnel
-journalctl --user -u paper-agent-api -u paper-agent-tunnel -n 100
-systemctl --user restart paper-agent-api
+systemctl --user status batteryscientist-api batteryscientist-tunnel
+journalctl --user -u batteryscientist-api -u batteryscientist-tunnel -n 100
+systemctl --user restart batteryscientist-api
 ```
 
 网络连通检查使用 `/api/auth/session`；未登录请求 `/api/health` 应返回 401。API 重启会保留研究进程及已落盘的登录会话。Tunnel 重启不会终止研究进程，事件连接会重连。修改密码摘要后应清空管理数据库中的 `web_sessions` 以撤销旧会话。
 
-Vercel 项目目前通过 CLI 部署，GitHub 集成尚未获得新私有仓库权限。需要自动部署时，在 GitHub 为 Vercel App 授权 `Huang-Xinghao/paper-agent-web`，再连接仓库。不要从携带不被 Vercel 识别的 Git 作者信息的目录直接部署；可以将源码复制到不含 `.git` 和任何 `.env*` 的临时目录，复制 `.vercel/project.json` 后执行 `vercel deploy --prod`。
+Vercel 项目目前通过 CLI 部署，GitHub 集成尚未获得新私有仓库权限。需要自动部署时，在 GitHub 为 Vercel App 授权对应的前端仓库，再连接仓库。不要从携带不被 Vercel 识别的 Git 作者信息的目录直接部署；可以将源码复制到不含 `.git` 和任何 `.env*` 的临时目录，复制 `.vercel/project.json` 后执行 `vercel deploy --prod`。
 
 ## 论文、图片和专家问答
 
@@ -116,7 +116,7 @@ Vercel 项目目前通过 CLI 部署，GitHub 集成尚未获得新私有仓库�
 
 导航栏提供“电池范式库”和“电池资源库”，分别对应 `/libraries/paradigms` 与 `/libraries/battery`。页面支持正文搜索、分类筛选、Markdown/公式/表格阅读、库内文档跳转及图片和 PDF 查看；手机端可在目录和正文之间切换。文档路径、搜索与分类保存在 URL，支持刷新和分享。
 
-内容直接读取后端资源目录，点击刷新即可重新读取；当前提供只读浏览。后端目录及接口配置见 `paper-agent/docs/web.md`。
+内容直接读取后端资源目录，点击刷新即可重新读取；当前提供只读浏览。后端目录及接口配置见 `batteryscientist/docs/web.md`。
 
 电池范式库首页为关系图谱，基于 Wiki 中的真实节点与 `graph/edges.jsonl` 关系绘制，支持缩放、平移、缩略图、类型筛选和关键词定位；点击节点以侧边文档面板阅读，关闭后继续浏览图谱。未记录关系的条目不自动推断连线。电池资源库继续使用分类目录阅读。
 
@@ -128,4 +128,4 @@ Vercel 项目目前通过 CLI 部署，GitHub 集成尚未获得新私有仓库�
 
 导航“物理实验室”（`/laboratory`）提供“新威 BTS”和“自动化扣电”两个页签，后者暂留空。BTS 按设备、单元展示通道卡片，包含真实运行状态、电压、电流、容量、能量；支持设备选择、状态筛选、搜索及点击查看通道详情。每 10 秒自动刷新，可暂停或手动刷新，断线保留数据并明确标记“未更新”。
 
-数据通过受登录保护的 `/api/laboratory/bts` 获取，由后端连接实验室 MCP 服务。后端需安装 MCP 依赖并启用 `laboratory` 阶段，配置见 `paper-agent/docs/web.md`；无需在浏览器配置设备地址或令牌。页面不提供设备控制。交互回归：`npx playwright test tests/laboratory.spec.ts`。
+数据通过受登录保护的 `/api/laboratory/bts` 获取，由后端连接实验室 MCP 服务。后端需安装 MCP 依赖并启用 `laboratory` 阶段，配置见 `batteryscientist/docs/web.md`；无需在浏览器配置设备地址或令牌。页面不提供设备控制。交互回归：`npx playwright test tests/laboratory.spec.ts`。

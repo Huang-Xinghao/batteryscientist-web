@@ -1,5 +1,23 @@
 import { expect, test } from '@playwright/test';
 
+const liveCapabilities = {
+  discovery: true,
+  status: true,
+  measurements: true,
+  records: false,
+  protocols: false,
+};
+const discoveryCapabilities = { ...liveCapabilities, status: false, measurements: false };
+const sources = [
+  { id: 'bts', label: '新威 BTS', vendor: 'Neware', kind: 'cycler', configured: true },
+  { id: 'land', label: '蓝电 LAND', vendor: 'LAND', kind: 'cycler', configured: true },
+  { id: 'coin-cell', label: '自动化扣电', vendor: '', kind: 'workstation', configured: false },
+];
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/laboratory/sources', (route) => route.fulfill({ json: sources }));
+});
+
 function snapshot() {
   const states = [
     'running',
@@ -13,6 +31,9 @@ function snapshot() {
   ];
   const labels = ['充电中', '已结束', '已暂停', '空闲', '故障', '已停止', '离线', '未知'];
   return {
+    source_id: 'bts',
+    label: '新威 BTS',
+    capabilities: liveCapabilities,
     connection: 'online',
     observed_at: '2026-11-12T08:00:00Z',
     last_success_at: '2026-11-12T08:00:01Z',
@@ -20,6 +41,11 @@ function snapshot() {
     message: null,
     devices: [
       {
+        source_id: 'bts',
+        vendor: 'Neware',
+        name: '新威 BTS · 239',
+        kind: 'cycler',
+        capabilities: liveCapabilities,
         id: 'local/27/239',
         device_id: '239',
         device_type: '27',
@@ -50,7 +76,9 @@ test('laboratory navigation shows grouped channels, measurements, filtering and 
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.route('**/api/laboratory/bts', (route) => route.fulfill({ json: snapshot() }));
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) =>
+    route.fulfill({ json: snapshot() }),
+  );
   await page.goto('/');
   await page.locator('.sidebar').getByRole('link', { name: '物理实验室', exact: true }).click();
   await expect(page.getByRole('heading', { name: /物理实验室/ })).toBeVisible();
@@ -87,7 +115,7 @@ test('refresh queries again and disconnection marks retained readings as stale',
 }) => {
   let connected = true;
   let calls = 0;
-  await page.route('**/api/laboratory/bts', (route) => {
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) => {
     calls++;
     const data = snapshot();
     if (!connected) {
@@ -120,7 +148,7 @@ test('refresh queries again and disconnection marks retained readings as stale',
 test('mobile laboratory fits the viewport and coin cell section stays empty', async ({ page }) => {
   let calls = 0;
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route('**/api/laboratory/bts', (route) => {
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) => {
     calls++;
     return route.fulfill({ json: snapshot() });
   });
@@ -142,23 +170,23 @@ test('mobile laboratory fits the viewport and coin cell section stays empty', as
 });
 
 test('unavailable responses show a useful empty state and retry', async ({ page }) => {
-  await page.route('**/api/laboratory/bts', (route) =>
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) =>
     route.fulfill({ status: 503, json: { detail: 'unavailable' } }),
   );
   await page.goto('/laboratory');
   await expect(page.getByText('实验室连接暂时不可用')).toBeVisible();
   await expect(page.getByText('暂无可显示的设备通道')).toBeVisible();
-  await page.route('**/api/laboratory/bts', (route) =>
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) =>
     route.fulfill({ json: { ...snapshot(), devices: [] } }),
   );
   await page.getByRole('button', { name: '刷新', exact: true }).click();
-  await expect(page.getByText('BTS 已连接，尚未发现通道')).toBeVisible();
+  await expect(page.getByText('新威 BTS 已连接，尚未发现通道')).toBeVisible();
 });
 
 test('automatic refresh can be paused', async ({ page }) => {
   let calls = 0;
   await page.clock.install();
-  await page.route('**/api/laboratory/bts', (route) => {
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) => {
     calls++;
     return route.fulfill({ json: snapshot() });
   });
@@ -178,13 +206,21 @@ test('LAND discovery is distinct from BTS and never implies live measurements', 
 }) => {
   const land = {
     ...snapshot(),
+    source_id: 'land',
+    label: '蓝电 LAND',
+    capabilities: discoveryCapabilities,
     discovery_only: true,
     status_available: false,
     measurements_available: false,
-    stale: true,
+    stale: false,
     message: '已读取蓝电通道目录；通道在线情况、实时运行状态和测量值尚未接入。',
     devices: [
       {
+        source_id: 'land',
+        vendor: 'LAND',
+        name: '蓝电 LAND · windows',
+        kind: 'cycler',
+        capabilities: discoveryCapabilities,
         id: 'local/LAND/windows',
         device_id: 'windows',
         device_type: 'LAND',
@@ -208,16 +244,23 @@ test('LAND discovery is distinct from BTS and never implies live measurements', 
       },
     ],
   };
-  await page.route('**/api/laboratory/bts', (route) => route.fulfill({ json: snapshot() }));
-  await page.route('**/api/laboratory/land', (route) => route.fulfill({ json: land }));
+  await page.route('**/api/laboratory/sources/bts/snapshot', (route) =>
+    route.fulfill({ json: snapshot() }),
+  );
+  await page.route('**/api/laboratory/sources/land/snapshot', (route) =>
+    route.fulfill({ json: land }),
+  );
   await page.goto('/laboratory');
   await expect(page.locator('.bts-channel')).toHaveCount(40);
   await page.getByRole('tab', { name: '蓝电 LAND' }).click();
   await expect(page).toHaveURL(/tab=land/);
-  await expect(page.getByText('蓝电查询服务已连接', { exact: true })).toBeVisible();
+  await expect(page.getByText('蓝电 LAND查询服务已连接', { exact: true })).toBeVisible();
   await expect(page.locator('.bts-channel')).toHaveCount(80);
   await expect(page.locator('.bts-channel').first()).toContainText('未知');
-  await expect(page.locator('.bts-channel').first()).toContainText('\u2014');
+  await expect(page.locator('.bts-channel-metrics')).toHaveCount(0);
+  await expect(page.locator('.bts-channel.is-stale')).toHaveCount(0);
+  await expect(page.locator('.bts-device-name')).toContainText('LAND');
+  await expect(page.locator('.bts-device-name')).not.toContainText('新威');
   await expect(page.locator('.bts-stat').filter({ hasText: '运行中' })).toContainText('\u2014');
   await page.locator('.bts-channel').first().click();
   await expect(page.getByText('该通道已发现，实时状态与测量值尚不可用')).toBeVisible();
@@ -233,4 +276,38 @@ test('LAND discovery is distinct from BTS and never implies live measurements', 
   await page.screenshot({ path: 'artifacts/laboratory-land-mobile.png', fullPage: true });
   await page.getByRole('tab', { name: '新威 BTS' }).click();
   await expect(page.locator('.bts-channel')).toHaveCount(40);
+});
+
+test('registered cycler sources appear without vendor-specific frontend branches', async ({
+  page,
+}) => {
+  await page.route('**/api/laboratory/sources', (route) =>
+    route.fulfill({
+      json: [
+        ...sources,
+        {
+          id: 'test-cycler',
+          label: '测试循环仪',
+          vendor: 'Test',
+          kind: 'cycler',
+          configured: true,
+        },
+      ],
+    }),
+  );
+  await page.route('**/api/laboratory/sources/test-cycler/snapshot', (route) => {
+    const data = snapshot();
+    data.source_id = 'test-cycler';
+    data.label = '测试循环仪';
+    data.devices[0].source_id = 'test-cycler';
+    data.devices[0].vendor = 'Test';
+    return route.fulfill({ json: data });
+  });
+  await page.goto('/laboratory?tab=test-cycler');
+  await expect(page.getByRole('tab', { name: '测试循环仪' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.locator('.bts-channel')).toHaveCount(40);
+  await expect(page.locator('.bts-device-name')).toContainText('Test');
 });

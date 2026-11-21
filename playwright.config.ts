@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
-const apiPort = process.env.PAPER_AGENT_E2E_API_PORT || '8001';
-const webPort = process.env.PAPER_AGENT_E2E_WEB_PORT || '5174';
+const apiPort = process.env.BATTERYSCIENTIST_E2E_API_PORT || '8001';
+const webPort = process.env.BATTERYSCIENTIST_E2E_WEB_PORT || '5174';
+const testDist = '.e2e-dist';
 export default defineConfig({
   testDir: './tests',
   testIgnore: 'proposal-review.spec.ts',
@@ -27,9 +28,9 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `npm run build && npm run preview -- --port ${webPort}`,
+      command: `npm run build -- --outDir ${testDist} && npm run preview -- --outDir ${testDist} --port ${webPort}`,
       url: `http://127.0.0.1:${webPort}`,
-      env: { PAPER_AGENT_API_URL: `http://127.0.0.1:${apiPort}` },
+      env: { BATTERYSCIENTIST_API_URL: `http://127.0.0.1:${apiPort}` },
       timeout: 120000,
       reuseExistingServer: false,
     },

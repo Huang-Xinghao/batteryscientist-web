@@ -3,14 +3,14 @@ import { writeFile } from 'node:fs/promises';
 import openapiTS, { astToString } from 'openapi-typescript';
 import { fileURLToPath } from 'node:url';
 const backend =
-  process.env.PAPER_AGENT_BACKEND_DIR ||
-  fileURLToPath(new URL('../../paper-agent', import.meta.url));
+  process.env.BATTERYSCIENTIST_BACKEND_DIR ||
+  fileURLToPath(new URL('../../batteryscientist', import.meta.url));
 const python =
-  process.env.PAPER_AGENT_RUNTIME_PYTHON || '/data/apps/micromamba/envs/xinghao/bin/python';
+  process.env.BATTERYSCIENTIST_RUNTIME_PYTHON || '/data/apps/micromamba/envs/xinghao/bin/python';
 const schema = JSON.parse(
   execFileSync(
     python,
-    ['-c', 'import json; from paper_agent.api.app import app; print(json.dumps(app.openapi()))'],
+    ['-c', 'import json; from batteryscientist.api.app import app; print(json.dumps(app.openapi()))'],
     { cwd: backend, encoding: 'utf8' },
   ),
 );

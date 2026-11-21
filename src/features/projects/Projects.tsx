@@ -267,7 +267,7 @@ export function Projects() {
               label="已有项目绝对路径"
               rules={[{ required: true, message: '请输入项目路径' }]}
             >
-              <Input placeholder="/data/xinghao/paper-agent-projects/demo-project23" />
+              <Input placeholder="/data/xinghao/batteryscientist-projects/my-research" />
             </Form.Item>
           )}
         </Form>

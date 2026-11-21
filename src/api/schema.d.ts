@@ -196,6 +196,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/laboratory/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Laboratory Sources */
+        get: operations["laboratory_sources_api_laboratory_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/laboratory/sources/{source_id}/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Laboratory Snapshot */
+        get: operations["laboratory_snapshot_api_laboratory_sources__source_id__snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/laboratory/bts": {
         parameters: {
             query?: never;
@@ -203,7 +237,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bts Snapshot */
+        /**
+         * Bts Snapshot
+         * @deprecated
+         */
         get: operations["bts_snapshot_api_laboratory_bts_get"];
         put?: never;
         post?: never;
@@ -220,7 +257,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Land Snapshot */
+        /**
+         * Land Snapshot
+         * @deprecated
+         */
         get: operations["land_snapshot_api_laboratory_land_get"];
         put?: never;
         post?: never;
@@ -505,8 +545,80 @@ export interface components {
              */
             is_active?: boolean;
         };
-        /** BtsChannelView */
-        BtsChannelView: {
+        /** CanvasApply */
+        CanvasApply: {
+            /** Sha256 */
+            sha256: string;
+        };
+        /** CanvasDraft */
+        CanvasDraft: {
+            /**
+             * Version
+             * @default 1
+             */
+            version?: number;
+            /** Sourcehash */
+            sourceHash: string;
+            /** Nodes */
+            nodes: components["schemas"]["CanvasNode"][];
+            /** Edges */
+            edges: components["schemas"]["CanvasEdge"][];
+            /** Changes */
+            changes?: string[];
+            review?: components["schemas"]["ProposalReview"] | null;
+        };
+        /** CanvasEdge */
+        CanvasEdge: {
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        };
+        /** CanvasNode */
+        CanvasNode: {
+            /** Id */
+            id: string;
+            position: components["schemas"]["Position"];
+            data: components["schemas"]["ModuleData"];
+        };
+        /** CanvasSave */
+        CanvasSave: {
+            /** Sha256 */
+            sha256: string;
+            draft: components["schemas"]["CanvasDraft"];
+        };
+        /** Capabilities */
+        Capabilities: {
+            /**
+             * Discovery
+             * @default false
+             */
+            discovery: boolean;
+            /**
+             * Status
+             * @default false
+             */
+            status: boolean;
+            /**
+             * Measurements
+             * @default false
+             */
+            measurements: boolean;
+            /**
+             * Records
+             * @default false
+             */
+            records: boolean;
+            /**
+             * Protocols
+             * @default false
+             */
+            protocols: boolean;
+        };
+        /** ChannelView */
+        ChannelView: {
             /** Channel Id */
             channel_id: string;
             /** Unit Id */
@@ -554,97 +666,6 @@ export interface components {
             /** Step Type */
             step_type: string | null;
         };
-        /** BtsDeviceView */
-        BtsDeviceView: {
-            /** Id */
-            id: string;
-            /** Device Id */
-            device_id: string;
-            /** Device Type */
-            device_type: string;
-            /** Channels */
-            channels: components["schemas"]["BtsChannelView"][];
-        };
-        /** BtsSnapshotView */
-        BtsSnapshotView: {
-            /**
-             * Connection
-             * @enum {string}
-             */
-            connection: "online" | "offline" | "unconfigured";
-            /** Observed At */
-            observed_at: string | null;
-            /** Last Success At */
-            last_success_at: string | null;
-            /**
-             * Stale
-             * @default false
-             */
-            stale: boolean;
-            /** Message */
-            message: string | null;
-            /** Devices */
-            devices: components["schemas"]["BtsDeviceView"][];
-            /**
-             * Discovery Only
-             * @default false
-             */
-            discovery_only: boolean;
-            /**
-             * Status Available
-             * @default true
-             */
-            status_available: boolean;
-            /**
-             * Measurements Available
-             * @default true
-             */
-            measurements_available: boolean;
-        };
-        /** CanvasApply */
-        CanvasApply: {
-            /** Sha256 */
-            sha256: string;
-        };
-        /** CanvasDraft */
-        CanvasDraft: {
-            /**
-             * Version
-             * @default 1
-             */
-            version?: number;
-            /** Sourcehash */
-            sourceHash: string;
-            /** Nodes */
-            nodes: components["schemas"]["CanvasNode"][];
-            /** Edges */
-            edges: components["schemas"]["CanvasEdge"][];
-            /** Changes */
-            changes?: string[];
-            review?: components["schemas"]["ProposalReview"] | null;
-        };
-        /** CanvasEdge */
-        CanvasEdge: {
-            /** Id */
-            id: string;
-            /** Source */
-            source: string;
-            /** Target */
-            target: string;
-        };
-        /** CanvasNode */
-        CanvasNode: {
-            /** Id */
-            id: string;
-            position: components["schemas"]["Position"];
-            data: components["schemas"]["ModuleData"];
-        };
-        /** CanvasSave */
-        CanvasSave: {
-            /** Sha256 */
-            sha256: string;
-            draft: components["schemas"]["CanvasDraft"];
-        };
         /** CheckpointView */
         CheckpointView: {
             /** Node */
@@ -664,6 +685,38 @@ export interface components {
             decision_options?: string[][] | null;
             /** Report Sha256 */
             report_sha256?: string | null;
+        };
+        /** DeviceView */
+        DeviceView: {
+            /**
+             * Source Id
+             * @default
+             */
+            source_id: string;
+            /**
+             * Vendor
+             * @default
+             */
+            vendor: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Kind
+             * @default cycler
+             */
+            kind: string;
+            capabilities: components["schemas"]["Capabilities"];
+            /** Id */
+            id: string;
+            /** Device Id */
+            device_id: string;
+            /** Device Type */
+            device_type: string;
+            /** Channels */
+            channels: components["schemas"]["ChannelView"][];
         };
         /** FileEdit */
         FileEdit: {
@@ -876,25 +929,6 @@ export interface components {
              */
             edited?: boolean;
         };
-        /** RevisionTask */
-        RevisionTask: {
-            /**
-             * Node
-             * @enum {string}
-             */
-            node: "literature" | "data_search" | "ideas" | "refine" | "experiment_plan" | "experiment_bridge" | "paper_plan" | "paper_figure" | "paper_write" | "paper_compile" | "improvement";
-            /** Target */
-            target: string;
-            /** Instruction */
-            instruction: string;
-            /** Files */
-            files: string[];
-            /**
-             * Compile Pdf
-             * @default false
-             */
-            compile_pdf?: boolean;
-        };
         /** RunCreate */
         RunCreate: {
             /**
@@ -902,7 +936,7 @@ export interface components {
              * @default start
              * @enum {string}
              */
-            action?: "start" | "resume" | "review" | "revise" | "coordinate" | "proposal_revise" | "proposal_approve";
+            action?: "start" | "resume" | "review" | "coordinate" | "proposal_revise" | "proposal_approve";
             /**
              * Prompt
              * @default
@@ -945,9 +979,7 @@ export interface components {
             checkpoint_token?: string | null;
             /** Proposal Sha256 */
             proposal_sha256?: string | null;
-            node_task?: components["schemas"]["RevisionTask"] | null;
             stage_task?: components["schemas"]["StageAssignment"] | null;
-            revision_task?: components["schemas"]["RevisionTask"] | null;
         };
         /** RunView */
         RunView: {
@@ -966,6 +998,72 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** SnapshotView */
+        SnapshotView: {
+            /**
+             * Source Id
+             * @default
+             */
+            source_id: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            capabilities: components["schemas"]["Capabilities"];
+            /**
+             * Connection
+             * @enum {string}
+             */
+            connection: "online" | "offline" | "unconfigured";
+            /** Observed At */
+            observed_at: string | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
+            /** Message */
+            message: string | null;
+            /** Devices */
+            devices: components["schemas"]["DeviceView"][];
+            /**
+             * Discovery Only
+             * @default false
+             */
+            discovery_only: boolean;
+            /**
+             * Status Available
+             * @default false
+             */
+            status_available: boolean;
+            /**
+             * Measurements Available
+             * @default false
+             */
+            measurements_available: boolean;
+        };
+        /** SourceView */
+        SourceView: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Vendor */
+            vendor: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "cycler" | "workstation";
+            /**
+             * Configured
+             * @default false
+             */
+            configured: boolean;
+        };
         /** StageAssignment */
         StageAssignment: {
             /**
@@ -980,6 +1078,12 @@ export interface components {
              * @enum {string}
              */
             role: "idea_generator" | "experiment" | "paper_writer" | "wiki_agent";
+            /**
+             * Full Stage
+             * @description 完整研究阶段为true；普通修改、检查或问答任务为false，不套用整阶段验收。
+             * @default false
+             */
+            full_stage?: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -1370,6 +1474,57 @@ export interface operations {
             };
         };
     };
+    laboratory_sources_api_laboratory_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceView"][];
+                };
+            };
+        };
+    };
+    laboratory_snapshot_api_laboratory_sources__source_id__snapshot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     bts_snapshot_api_laboratory_bts_get: {
         parameters: {
             query?: never;
@@ -1385,7 +1540,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BtsSnapshotView"];
+                    "application/json": components["schemas"]["SnapshotView"];
                 };
             };
         };
@@ -1405,7 +1560,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BtsSnapshotView"];
+                    "application/json": components["schemas"]["SnapshotView"];
                 };
             };
         };

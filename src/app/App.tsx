@@ -26,7 +26,7 @@ export function App() {
             <DeploymentUnitOutlined />
           </span>
           <div>
-            Paper Agent<small>RESEARCH WORKSPACE</small>
+            BatteryScientist<small>RESEARCH WORKSPACE</small>
           </div>
         </Link>
         <div className="workspace-label">

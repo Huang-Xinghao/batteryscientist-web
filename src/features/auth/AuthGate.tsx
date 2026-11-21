@@ -33,7 +33,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (session.isError)
     return (
       <div className="auth-screen">
-        <Card title="Paper Agent">
+        <Card title="BatteryScientist">
           <Alert type="error" message="暂时无法连接研究服务" description="请稍后重试。" />
           <Button onClick={() => session.refetch()}>重新连接</Button>
         </Card>
@@ -42,7 +42,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!session.data.authenticated)
     return (
       <div className="auth-screen">
-        <Card title="Paper Agent · 科研工作台" className="auth-card">
+        <Card title="BatteryScientist · 科研工作台" className="auth-card">
           <p>登录你的研究空间</p>
           <Form layout="vertical" onFinish={(values) => login.mutate(values)}>
             <Form.Item

@@ -2,7 +2,7 @@
 server {
     listen 127.0.0.1:8080;
     server_name localhost;
-    root /home/xinghaohuang/paper-agent-web/dist;
+    root /home/xinghaohuang/batteryscientist-web/dist;
     index index.html;
     client_max_body_size 3m;
 

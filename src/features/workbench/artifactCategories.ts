@@ -9,7 +9,7 @@ export function artifactCategory(path: string) {
     return 'references';
   }
   if (
-    /^(?:experiment-runs|\.paper-agent)\//.test(normalized) ||
+    /^(?:experiment-runs|\.batteryscientist)\//.test(normalized) ||
     /(?:\.log|\.jsonl)$|(?:^|\/)(?:workflow-|experiment-queue-)/.test(normalized)
   )
     return 'logs';

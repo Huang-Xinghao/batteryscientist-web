@@ -1,6 +1,6 @@
 # 文件预览公共模块
 
-从 `/home/xinghaohuang/StoraGent/frontend` 的公共模块适配到 React，保留当前 Paper Agent API 与 Monaco 编辑器。
+从 `/home/xinghaohuang/StoraGent/frontend` 的公共模块适配到 React，保留当前 BatteryScientist API 与 Monaco 编辑器。
 
 | 当前模块                                | StoraGent 参考来源                    | 复用范围                                    |
 | --------------------------------------- | ------------------------------------- | ------------------------------------------- |

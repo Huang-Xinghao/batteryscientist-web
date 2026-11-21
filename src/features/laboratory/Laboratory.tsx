@@ -11,7 +11,12 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { api, type BtsChannel, type BtsDevice } from '../../api/client';
+import {
+  api,
+  type LaboratoryChannel,
+  type LaboratoryDevice,
+  type LaboratorySource,
+} from '../../api/client';
 import './laboratory.css';
 
 const filters = [
@@ -41,7 +46,7 @@ function receivedAt(timestamp: string | null | undefined) {
   return new Date(timestamp).toLocaleString('zh-CN', { hour12: false });
 }
 
-function metrics(channel: BtsChannel) {
+function metrics(channel: LaboratoryChannel) {
   return [
     ['电压', value(channel.voltage_v), 'V'],
     ['电流', value(channel.current_a), 'A'],
@@ -52,7 +57,12 @@ function metrics(channel: BtsChannel) {
 
 export function Laboratory() {
   const [params, setParams] = useSearchParams();
-  const tab = ['land', 'coin-cell'].includes(params.get('tab') || '') ? params.get('tab')! : 'bts';
+  const sourcesQuery = useQuery({
+    queryKey: ['laboratory-sources'],
+    queryFn: ({ signal }) => api.laboratorySources(signal),
+  });
+  const sources = sourcesQuery.data || [];
+  const source = sources.find((item) => item.id === params.get('tab')) || sources[0];
   return (
     <div className="page laboratory-page">
       <div className="page-heading">
@@ -64,43 +74,38 @@ export function Laboratory() {
           <p className="page-description">实验设备与通道运行状态</p>
         </div>
       </div>
-      <Tabs
-        className="laboratory-tabs"
-        activeKey={tab}
-        onChange={(key) => setParams(key === 'bts' ? {} : { tab: key })}
-        items={[
-          {
-            key: 'bts',
-            label: (
-              <span>
-                <ThunderboltOutlined /> 新威 BTS
-              </span>
-            ),
-          },
-          {
-            key: 'land',
-            label: (
-              <span>
-                <ThunderboltOutlined /> 蓝电 LAND
-              </span>
-            ),
-          },
-          {
-            key: 'coin-cell',
-            label: (
-              <span>
-                <ExperimentOutlined /> 自动化扣电
-              </span>
-            ),
-          },
-        ]}
-      />
-      {tab === 'bts' || tab === 'land' ? (
-        <BtsDashboard key={tab} vendor={tab} />
+      {sourcesQuery.isPending ? (
+        <Skeleton active />
+      ) : sourcesQuery.isError ? (
+        <Alert
+          type="warning"
+          message="无法读取实验室设备列表"
+          action={<Button onClick={() => void sourcesQuery.refetch()}>重试</Button>}
+        />
       ) : (
-        <section className="laboratory-placeholder" aria-label="自动化扣电">
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂未接入设备" />
-        </section>
+        <>
+          <Tabs
+            className="laboratory-tabs"
+            activeKey={source?.id}
+            onChange={(key) => setParams({ tab: key })}
+            items={sources.map((item) => ({
+              key: item.id,
+              label: (
+                <span>
+                  {item.kind === 'cycler' ? <ThunderboltOutlined /> : <ExperimentOutlined />}{' '}
+                  {item.label}
+                </span>
+              ),
+            }))}
+          />
+          {source?.kind === 'cycler' ? (
+            <DeviceDashboard key={source.id} source={source} />
+          ) : (
+            <section className="laboratory-placeholder" aria-label={source?.label || '实验设备'}>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂未接入设备" />
+            </section>
+          )}
+        </>
       )}
     </div>
   );
@@ -109,13 +114,20 @@ export function Laboratory() {
 function ChannelCard({
   channel,
   stale,
+  measurementsAvailable,
+  statusAvailable,
   onOpen,
 }: {
-  channel: BtsChannel;
+  channel: LaboratoryChannel;
   stale: boolean;
+  measurementsAvailable: boolean;
+  statusAvailable: boolean;
   onOpen: () => void;
 }) {
-  const outdated = stale || channel.status_stale || channel.measurements_stale;
+  const outdated =
+    stale ||
+    (statusAvailable && channel.status_stale) ||
+    (measurementsAvailable && channel.measurements_stale);
   return (
     <button
       className={`bts-channel state-${channel.state}${outdated ? ' is-stale' : ''}`}
@@ -132,17 +144,19 @@ function ChannelCard({
       <div className="bts-channel-state">
         {outdated && channel.observed_at ? '未更新' : channel.status_label}
       </div>
-      <dl className="bts-channel-metrics">
-        {metrics(channel).map(([label, reading, unit]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>
-              {reading}
-              <small>{unit}</small>
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {measurementsAvailable && (
+        <dl className="bts-channel-metrics">
+          {metrics(channel).map(([label, reading, unit]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>
+                {reading}
+                <small>{unit}</small>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </button>
   );
 }
@@ -153,8 +167,8 @@ function DevicePanel({
   stale,
   onOpen,
 }: {
-  device: BtsDevice;
-  channels: BtsChannel[];
+  device: LaboratoryDevice;
+  channels: LaboratoryChannel[];
   stale: boolean;
   onOpen: (id: string) => void;
 }) {
@@ -170,7 +184,9 @@ function DevicePanel({
           </span>
           <div>
             <h2>设备 {device.device_id}</h2>
-            <span>新威 BTS · 类型 {device.device_type}</span>
+            <span>
+              {device.vendor} · 类型 {device.device_type}
+            </span>
           </div>
         </div>
         <span className="bts-device-count">
@@ -191,6 +207,8 @@ function DevicePanel({
                 <ChannelCard
                   key={channel.channel_id}
                   channel={channel}
+                  measurementsAvailable={device.capabilities.measurements}
+                  statusAvailable={device.capabilities.status}
                   stale={stale}
                   onOpen={() => onOpen(channel.channel_id)}
                 />
@@ -202,17 +220,16 @@ function DevicePanel({
   );
 }
 
-function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
-  const brand = vendor === 'land' ? '蓝电 LAND' : '新威 BTS';
+function DeviceDashboard({ source }: { source: LaboratorySource }) {
+  const brand = source.label;
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [deviceId, setDeviceId] = useState('all');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const query = useQuery({
-    queryKey: ['laboratory', vendor],
-    queryFn: ({ signal }) =>
-      vendor === 'land' ? api.landSnapshot(signal) : api.btsSnapshot(signal),
+    queryKey: ['laboratory', source.id],
+    queryFn: ({ signal }) => api.laboratorySnapshot(source.id, signal),
     refetchInterval: autoRefresh ? 10000 : false,
     retry: false,
   });
@@ -230,7 +247,7 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
     .filter((device) => deviceId === 'all' || device.id === deviceId)
     .flatMap((device) => device.channels);
   const searchText = search.trim().toLowerCase();
-  const matches = (channel: BtsChannel) =>
+  const matches = (channel: LaboratoryChannel) =>
     (filter === 'all' || channel.state === filter) &&
     (!searchText ||
       `${channel.channel_id} 单元${channel.unit_id} 通道${channel.number} ${channel.status_label}`
@@ -242,21 +259,21 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
     ['通道总数', snapshot?.last_success_at ? allChannels.length : '—', '个'],
     [
       '运行中',
-      online && snapshot?.status_available !== false
+      online && snapshot?.capabilities.status
         ? allChannels.filter((c) => c.state === 'running' && !c.status_stale).length
         : '—',
       '个',
     ],
     [
       '已结束',
-      online && snapshot?.status_available !== false
+      online && snapshot?.capabilities.status
         ? allChannels.filter((c) => c.state === 'finished' && !c.status_stale).length
         : '—',
       '个',
     ],
     [
       '异常通道',
-      online && snapshot?.status_available !== false
+      online && snapshot?.capabilities.status
         ? allChannels.filter((c) => c.state === 'error' && !c.status_stale).length
         : '—',
       '个',
@@ -272,7 +289,7 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
               ? '正在连接设备'
               : online
                 ? snapshot?.discovery_only
-                  ? '蓝电查询服务已连接'
+                  ? brand + '查询服务已连接'
                   : '设备已连接'
                 : disconnected
                   ? '设备连接中断'
@@ -406,7 +423,7 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
                 description={
                   allChannels.length === 0
                     ? online
-                      ? (vendor === 'land' ? 'LAND' : 'BTS') + ' 已连接，尚未发现通道'
+                      ? brand + ' 已连接，尚未发现通道'
                       : '暂无可显示的设备通道'
                     : '没有匹配的通道'
                 }
@@ -418,12 +435,14 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
             {disconnected
               ? '当前展示上次接收的数据'
               : snapshot?.discovery_only
-                ? '通道来自蓝电软件目录查询，不代表设备在线或正在运行'
+                ? '通道来自设备目录查询，不代表设备在线或正在运行'
                 : '数据来自设备实时查询'}
             <span>点击通道查看详情</span>
-            {allChannels.some((c) => c.status_stale || c.measurements_stale) && (
-              <span className="bts-stale-label">部分通道为上次接收值或暂无数据</span>
-            )}
+            {allChannels.some(
+              (c) =>
+                (snapshot?.capabilities.status && c.status_stale) ||
+                (snapshot?.capabilities.measurements && c.measurements_stale),
+            ) && <span className="bts-stale-label">部分通道为上次接收值或暂无数据</span>}
           </div>
         </>
       )}
@@ -451,17 +470,19 @@ function BtsDashboard({ vendor = 'bts' }: { vendor?: 'bts' | 'land' }) {
                 }
               />
             )}
-            <dl className="bts-detail-metrics">
-              {metrics(detail).map(([label, reading, unit]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>
-                    {reading}
-                    <small>{unit}</small>
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            {snapshot?.capabilities.measurements && (
+              <dl className="bts-detail-metrics">
+                {metrics(detail).map(([label, reading, unit]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>
+                      {reading}
+                      <small>{unit}</small>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
             <dl className="bts-detail-info">
               <dt>设备状态</dt>
               <dd>

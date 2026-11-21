@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const backend =
-  process.env.PAPER_AGENT_BACKEND_DIR ||
-  fileURLToPath(new URL('../../paper-agent', import.meta.url));
+  process.env.BATTERYSCIENTIST_BACKEND_DIR ||
+  fileURLToPath(new URL('../../batteryscientist', import.meta.url));
 const children = [
   spawn('./run-web-api', [], { cwd: backend, stdio: 'inherit', env: process.env }),
   spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1'], {

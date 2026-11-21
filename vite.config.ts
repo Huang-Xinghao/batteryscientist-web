@@ -15,7 +15,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: process.env.PAPER_AGENT_API_URL || 'http://127.0.0.1:8000',
+        target: process.env.BATTERYSCIENTIST_API_URL || 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

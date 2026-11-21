@@ -333,7 +333,7 @@ export function Conversation({
               <span className="agent-symbol">✦</span>
               <h2>从一个研究问题开始</h2>
               <p>
-                告诉 Paper Agent
+                告诉 BatteryScientist
                 你想探索什么。分析进度、工具调用和研究输出会出现在这里，阶段产物会汇入右侧工作区。
               </p>
             </div>
@@ -341,7 +341,7 @@ export function Conversation({
           {showHistory && persistedStages.length > 0 && (
             <article className="chat-message agent-message">
               <div className="message-role">
-                <span className="agent-symbol">✦</span> Paper Agent <small>已有研究进展</small>
+                <span className="agent-symbol">✦</span> BatteryScientist <small>已有研究进展</small>
               </div>
               <p className="history-explanation">
                 已载入项目保存的阶段产物。较早运行未记录的对话和模型输出无法还原。
@@ -403,7 +403,7 @@ export function Conversation({
                   </article>
                   <article className="chat-message agent-message">
                     <div className="message-role">
-                      <span className="agent-symbol">✦</span> Paper Agent
+                      <span className="agent-symbol">✦</span> BatteryScientist
                     </div>
                     <div className="chat-markdown">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -566,7 +566,7 @@ export function Conversation({
           {checkpoint && (
             <article className="chat-message agent-message checkpoint-message">
               <div className="message-role">
-                <span className="agent-symbol">✦</span> Paper Agent <small>等待你的判断</small>
+                <span className="agent-symbol">✦</span> BatteryScientist <small>等待你的判断</small>
               </div>
               <div className="review-heading">
                 <h3>{reviewingProposal ? '请确认模型方案' : '一起确定下一步'}</h3>
