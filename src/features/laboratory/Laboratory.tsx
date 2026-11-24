@@ -130,7 +130,7 @@ function ChannelCard({
     (measurementsAvailable && channel.measurements_stale);
   return (
     <button
-      className={`bts-channel state-${channel.state}${outdated ? ' is-stale' : ''}`}
+      className={`bts-channel spotlight state-${channel.state}${outdated ? ' is-stale' : ''}`}
       data-channel-id={channel.channel_id}
       aria-label={`单元 ${channel.unit_id} 通道 ${channel.number}，${outdated ? '数据未更新，' : ''}${channel.status_label}`}
       onClick={onOpen}

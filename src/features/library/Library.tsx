@@ -27,9 +27,14 @@ const categoryLabels: Record<string, string> = {
   claims: '研究论断',
   figures: '图表资料',
 };
-const categoryName = (value: string) => value.split('/').map(part =>
-  ({ literature: '文献库', autoresearch: '自主研究', ...categoryLabels }[part] || part)
-).join(' / ');
+const categoryName = (value: string) =>
+  value
+    .split('/')
+    .map(
+      (part) =>
+        ({ literature: '文献库', autoresearch: '自主研究', ...categoryLabels })[part] || part,
+    )
+    .join(' / ');
 
 // Resolve links relative to the current document, including parent-directory links.
 function localResource(href: string, path: string) {
@@ -315,7 +320,7 @@ function LibraryBrowser({ kind }: { kind: LibraryKind }) {
                 index.data.items.map((entry) => (
                   <button
                     key={entry.path}
-                    className={`library-entry ${path === entry.path ? 'selected' : ''}`}
+                    className={`library-entry spotlight ${path === entry.path ? 'selected' : ''}`}
                     onClick={() => open(entry.path)}
                   >
                     <span className="library-entry-category">

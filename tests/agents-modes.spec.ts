@@ -175,11 +175,10 @@ test('mode choice is shared by composer and run settings and submits the chosen 
   page,
 }) => {
   await fixture(page, { running: false, mode: 'auto' });
-  await expect(page.getByRole('combobox', { name: '对话协作方式' })).toBeVisible();
-  await page.getByRole('combobox', { name: '对话协作方式' }).focus();
-  await page.getByRole('combobox', { name: '对话协作方式' }).press('ArrowDown');
-  await page.getByText('专家模式', { exact: true }).last().click();
-  await page.getByRole('button', { name: '协作方式设置', exact: true }).click();
+  const composerMode = page.getByLabel('对话协作方式');
+  await expect(composerMode).toBeVisible();
+  await composerMode.getByText('每阶段由我审阅', { exact: true }).click();
+  await page.getByRole('button', { name: '运行设置', exact: true }).click();
   await expect(
     page.getByText('专家模式 · 每个阶段审阅后继续（推荐）', { exact: true }),
   ).toBeVisible();
@@ -189,8 +188,10 @@ test('mode choice is shared by composer and run settings and submits the chosen 
   await expect(page.getByText('自动模式会在任务范围内连续推进', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: /取\s*消/ }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(page.locator('.chat-composer').getByText('自动模式', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '协作方式设置', exact: true }).click();
+  await expect(
+    composerMode.locator('.ant-segmented-item-selected').getByText('全自动', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '运行设置', exact: true }).click();
   await expect(page.getByText('自动模式会在任务范围内连续推进', { exact: false })).toBeVisible();
   let body: Record<string, unknown> | undefined;
   await page.route('**/api/projects/*/runs', (route) => {

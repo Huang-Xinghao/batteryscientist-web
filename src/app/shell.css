@@ -1,0 +1,196 @@
+/* Global navigation rail: icon + label on every page, same width everywhere. */
+.shell > .sidebar.rail {
+  width: 84px;
+  padding: 16px 8px 14px;
+  align-items: stretch;
+  gap: 4px;
+  background: var(--rail);
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+}
+.shell > .main-shell,
+body:has(.research-layout) .shell > .main-shell {
+  margin-left: 84px;
+}
+.shell > .sidebar.rail .rail-brand {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+}
+.battery-mark {
+  filter: drop-shadow(0 0 8px var(--glow));
+  transition: transform 0.35s var(--ease-spring);
+}
+.rail-brand:hover .battery-mark {
+  transform: rotate(-8deg) scale(1.08);
+}
+.battery-mark-charge {
+  transform-origin: 6.5px 15px;
+  animation: battery-charge 3.2s var(--ease-out) infinite;
+}
+@keyframes battery-charge {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+.shell > .sidebar.rail .rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.shell > .sidebar.rail .rail-link {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 60px;
+  margin: 0;
+  padding: 8px 2px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+}
+.shell > .sidebar.rail .rail-link .anticon {
+  font-size: 20px;
+  margin: 0;
+  transition: transform 0.3s var(--ease-spring);
+}
+.shell > .sidebar.rail .rail-link:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.shell > .sidebar.rail .rail-link:hover .anticon {
+  transform: translateY(-2px) scale(1.1);
+}
+.shell > .sidebar.rail .rail-link.selected {
+  color: var(--ink);
+  background: var(--brand-soft);
+}
+.shell > .sidebar.rail .rail-link.selected .anticon {
+  color: var(--brand-strong);
+}
+/* Glowing indicator bar on the active item. */
+.shell > .sidebar.rail .rail-link.selected::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--charge-a), var(--charge-b));
+  box-shadow: 0 0 10px var(--glow);
+}
+.shell > .sidebar.rail .rail-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.shell > .sidebar.rail .connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+  box-shadow: none;
+}
+.shell > .sidebar.rail .connection-dot.online {
+  background: var(--ok);
+}
+
+/* Pages get the dark ground; the old light page header styles are replaced. */
+.main-shell {
+  background: transparent;
+}
+.page-heading h1 {
+  color: var(--ink);
+  letter-spacing: -0.6px;
+}
+.eyebrow,
+.title-dot {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .shell > .sidebar.rail {
+    inset: auto 0 0 0;
+    width: auto;
+    height: 64px;
+    flex-direction: row;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+  .shell > .sidebar.rail .rail-brand,
+  .shell > .sidebar.rail .rail-status {
+    display: none;
+  }
+  .shell > .sidebar.rail .rail-nav {
+    flex-direction: row;
+  }
+  .shell > .sidebar.rail .rail-link {
+    flex: 1;
+    min-height: 50px;
+  }
+  .shell > .sidebar.rail .rail-link.selected::before {
+    left: 20%;
+    right: 20%;
+    top: -6px;
+    bottom: auto;
+    width: auto;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+  }
+  .shell > .main-shell,
+  body:has(.research-layout) .shell > .main-shell {
+    margin-left: 0;
+    padding-bottom: 64px;
+  }
+  /* The workbench has its own pane switcher; keep the full height for work. */
+  body:has(.research-layout) .shell > .sidebar.rail {
+    display: none;
+  }
+  body:has(.research-layout) .shell > .main-shell {
+    padding-bottom: 0;
+  }
+}
+@media (max-width: 700px) {
+  .shell > .sidebar.rail .rail-link.settings-link {
+    flex: 1;
+  }
+  .shell > .sidebar.rail .rail-link span {
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  .shell > .sidebar.rail .rail-link {
+    min-width: 0;
+    padding-inline: 0;
+  }
+}
+@media (max-width: 700px) {
+  .shell > .sidebar.rail .rail-nav {
+    flex: 4 1 0;
+  }
+  .shell > .sidebar.rail .rail-link.settings-link {
+    flex: 1 1 0;
+  }
+}

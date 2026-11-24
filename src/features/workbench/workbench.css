@@ -66,12 +66,12 @@
   align-items: center;
   gap: 12px;
   padding: 4px 10px;
-  border: 1px solid #e4e4e4;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fafafa;
+  background: var(--surface);
 }
 .collaboration-indicator {
-  color: #727272;
+  color: var(--muted);
   font-size: 18px;
 }
 .collaboration-bar > div {
@@ -86,14 +86,14 @@
   font-weight: 600;
 }
 .collaboration-bar > div > span {
-  color: #838383;
+  color: var(--muted);
 }
 .collaboration-bar.needs-review {
-  background: #fffaf0;
-  border-color: #ecdfbf;
+  background: var(--surface);
+  border-color: oklch(0.4 0.045 88.5);
 }
 .collaboration-bar.needs-review .collaboration-indicator {
-  color: #ad853e;
+  color: oklch(0.82 0.101 79.6);
 }
 .workbench-page > .run-alert {
   flex-shrink: 0;
@@ -114,7 +114,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-color: #e5e5e5;
+  border-color: var(--line);
   border-radius: 12px;
 }
 .phase-panel .panel-caption {
@@ -141,8 +141,8 @@
   margin-top: 3px;
 }
 .phase-item.selected {
-  background: #f1f1f1;
-  color: #565656;
+  background: var(--surface-2);
+  color: var(--ink-2);
 }
 .phase-footer {
   flex-shrink: 0;
@@ -190,7 +190,7 @@
   gap: 12px;
   padding: 5px 12px;
   flex-shrink: 0;
-  background: #fcfcfc;
+  background: var(--surface);
 }
 .file-selector .ant-select {
   min-width: 0;
@@ -212,11 +212,11 @@
 .artifact-toolbar {
   padding: 5px 12px;
   flex-shrink: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .artifact-filename {
   font-size: 11px;
-  color: #7c7c7c;
+  color: var(--muted);
 }
 .artifact-toolbar > .ant-space {
   flex-shrink: 0;
@@ -242,7 +242,7 @@
   margin: 0 auto;
   font-size: 14px;
   line-height: 1.9;
-  color: #494949;
+  color: var(--ink-2);
 }
 .artifact-content > .source-preview {
   max-height: none;
@@ -290,7 +290,7 @@
 }
 .is-latex .ant-alert-description {
   font-size: 11px;
-  color: #858585;
+  color: var(--muted);
 }
 .is-latex > .ant-alert-info .ant-alert-content {
   display: flex;
@@ -320,8 +320,8 @@
   flex-shrink: 0;
   padding: 4px 12px;
   font-size: 11px;
-  background: #f9f9f9;
-  border-bottom: 1px solid #ebebeb;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
 }
 .latex-source .source-preview {
   flex: 1;
@@ -349,7 +349,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #fff;
+  background: var(--surface);
 }
 .workbench-drawer .ant-drawer-body {
   padding: 20px;
@@ -644,11 +644,11 @@ body:has(.research-layout) .main-shell {
 .workbench-page:has(.research-layout) {
   padding: 0;
   gap: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .workbench-page:has(.research-layout) > .workbench-heading {
   padding: 10px 18px;
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--line);
   min-height: 54px;
 }
 .project-identity h1 {
@@ -676,7 +676,7 @@ body:has(.research-layout) .main-shell {
   width: var(--chat-width, 38%);
   min-width: 0;
   flex-shrink: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .conversation-heading {
   display: flex;
@@ -685,7 +685,7 @@ body:has(.research-layout) .main-shell {
   padding: 14px 24px;
   flex-shrink: 0;
   font-size: 12px;
-  color: #525252;
+  color: var(--ink-2);
 }
 .conversation-heading > span {
   display: flex;
@@ -695,7 +695,7 @@ body:has(.research-layout) .main-shell {
 }
 .conversation-heading small {
   font-weight: 400;
-  color: #929292;
+  color: var(--muted);
   font-size: 11px;
 }
 .conversation-scroll {
@@ -727,28 +727,28 @@ body:has(.research-layout) .main-shell {
   margin-bottom: 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #393939;
+  color: var(--ink-2);
 }
 .message-role small,
 .message-role time {
   font-size: 10px;
   font-weight: 400;
-  color: #949494;
+  color: var(--muted);
 }
 .message-role time {
   margin-left: auto;
 }
 .agent-symbol {
-  color: #626262;
+  color: var(--ink-2);
   font-size: 22px;
   line-height: 1;
 }
 .user-message {
-  background: #f3f3f3;
+  background: var(--surface-2);
   border-radius: 16px 16px 4px 16px;
   margin-left: 20px;
   padding: 14px 18px;
-  color: #424242;
+  color: var(--ink-2);
 }
 .user-message .message-role {
   margin-bottom: 5px;
@@ -770,12 +770,12 @@ body:has(.research-layout) .main-shell {
   letter-spacing: -0.6px;
 }
 .conversation-welcome p {
-  color: #8e8e8e;
+  color: var(--muted);
   line-height: 1.9;
   font-size: 13px;
 }
 .history-explanation {
-  color: #8e8e8e;
+  color: var(--muted);
   font-size: 12px;
 }
 .chat-artifacts {
@@ -789,23 +789,23 @@ body:has(.research-layout) .main-shell {
   gap: 12px;
   width: 100%;
   padding: 13px 14px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--line);
   border-radius: 10px;
   text-align: left;
-  background: #fff;
-  color: #505050;
+  background: var(--surface);
+  color: var(--ink-2);
   cursor: pointer;
   transition:
     background 150ms,
     border-color 150ms;
 }
 .chat-artifact:hover {
-  background: #f8f8f8;
-  border-color: #b7b7b7;
+  background: var(--surface-2);
+  border-color: var(--line-strong);
 }
 .chat-artifact > .anticon {
   font-size: 21px;
-  color: #8d8d8d;
+  color: var(--muted);
 }
 .chat-artifact > span:nth-child(2) {
   flex: 1;
@@ -814,21 +814,21 @@ body:has(.research-layout) .main-shell {
 .chat-artifact small {
   display: block;
   font-size: 10px;
-  color: #949494;
+  color: var(--muted);
   margin-top: 2px;
 }
 .chat-artifact > span:last-child {
-  color: #919191;
+  color: var(--muted);
 }
 .stage-excerpt {
-  color: #848484;
+  color: var(--muted);
   font-size: 12px;
 }
 .execution-step {
   display: flex;
   gap: 10px;
   align-items: baseline;
-  color: #8c8c8c;
+  color: var(--muted);
   font-size: 11px;
   padding: 8px 0;
 }
@@ -844,20 +844,20 @@ body:has(.research-layout) .main-shell {
 .execution-step time {
   font-size: 9px;
   white-space: nowrap;
-  color: #a8a8a8;
+  color: var(--muted);
 }
 .step-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #bebebe;
+  background: var(--line-strong);
   flex-shrink: 0;
 }
 .has-error {
-  color: #b65c48;
+  color: oklch(0.82 0.121 33.8);
 }
 .tool-activity {
-  border: 1px solid #ebebeb;
+  border: 1px solid var(--line);
   border-radius: 9px;
   margin: 8px 0;
   font-size: 11px;
@@ -869,7 +869,7 @@ body:has(.research-layout) .main-shell {
   gap: 9px;
   padding: 11px 12px;
   cursor: pointer;
-  color: #707070;
+  color: var(--muted);
   list-style: none;
 }
 .tool-activity summary::-webkit-details-marker {
@@ -883,7 +883,7 @@ body:has(.research-layout) .main-shell {
   margin-left: auto;
   font-size: 10px;
   white-space: nowrap;
-  color: #9d9d9d;
+  color: var(--muted);
 }
 .tool-activity summary::after {
   content: '⌄';
@@ -892,7 +892,7 @@ body:has(.research-layout) .main-shell {
   content: '⌃';
 }
 .tool-activity-body {
-  border-top: 1px solid #ebebeb;
+  border-top: 1px solid var(--line);
   padding: 8px 12px 12px;
 }
 .tool-activity-body pre {
@@ -901,11 +901,11 @@ body:has(.research-layout) .main-shell {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   padding: 10px;
-  background: #f8f8f8;
+  background: var(--surface-2);
   font-size: 10px;
 }
 .tool-activity-body p {
-  color: #a1a1a1;
+  color: var(--muted);
 }
 .chat-markdown {
   font-size: 13px;
@@ -913,7 +913,7 @@ body:has(.research-layout) .main-shell {
 }
 .chat-markdown pre {
   padding: 14px;
-  background: #f6f6f6;
+  background: var(--surface-2);
   border-radius: 8px;
   overflow: auto;
   font-size: 11px;
@@ -926,7 +926,7 @@ body:has(.research-layout) .main-shell {
 }
 .chat-markdown th,
 .chat-markdown td {
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--line);
   padding: 6px 10px;
 }
 .chat-markdown h1,
@@ -937,7 +937,7 @@ body:has(.research-layout) .main-shell {
   font-size: 15px;
 }
 .checkpoint-message {
-  border-top: 1px solid #ebebeb;
+  border-top: 1px solid var(--line);
   padding-top: 22px;
   margin-top: 20px;
 }
@@ -952,14 +952,14 @@ body:has(.research-layout) .main-shell {
 .review-heading h3 {
   margin: 0;
   font-size: 18px;
-  color: #404040;
+  color: var(--ink-2);
 }
 .review-heading > span {
   font-size: 12px;
-  color: #7b7b7b;
+  color: var(--muted);
 }
 .review-summary {
-  color: #717171;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -969,27 +969,27 @@ body:has(.research-layout) .main-shell {
   margin: 18px 0 12px;
 }
 .review-question {
-  border: 1px solid #e6e6e6;
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: #fbfbfb;
+  background: var(--surface);
   padding: 16px;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
 }
 .review-question:focus-within {
-  border-color: #919191;
-  box-shadow: 0 0 0 3px #6969690d;
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 .review-question.answered {
-  border-color: #cccccc;
+  border-color: var(--line);
 }
 .review-question label {
   display: flex;
   gap: 10px;
   align-items: flex-start;
   margin-bottom: 12px;
-  color: #404040;
+  color: var(--ink-2);
   font-size: 14px;
   line-height: 1.7;
   cursor: text;
@@ -1005,26 +1005,26 @@ body:has(.research-layout) .main-shell {
   flex: 0 0 26px;
   height: 26px;
   border-radius: 8px;
-  background: #efefef;
-  color: #797979;
+  background: var(--surface-3);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 600;
 }
 .review-answer-check {
   margin-top: 6px;
-  color: #7b7b7b;
+  color: var(--muted);
 }
 .review-question .ant-input {
-  border-color: #e7e7e7;
+  border-color: var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.8;
   resize: vertical;
 }
 .review-note {
-  color: #8c8c8c;
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -1035,22 +1035,22 @@ body:has(.research-layout) .main-shell {
   gap: 10px;
   flex-wrap: wrap;
   padding: 2px 2px 8px;
-  color: #676767;
+  color: var(--muted);
   font-size: 12px;
 }
 .review-composer-label small {
-  color: #949494;
+  color: var(--muted);
   margin-left: 4px;
 }
 .review-composer-label > span:last-child {
-  color: #8c8c8c;
+  color: var(--muted);
   font-size: 11px;
 }
 .agent-working {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #777777;
+  color: var(--muted);
   font-size: 12px;
   margin-top: 18px;
 }
@@ -1060,10 +1060,10 @@ body:has(.research-layout) .main-shell {
 }
 .chat-composer {
   padding: 12px;
-  border: 1px solid #e3e3e3;
+  border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: 0 3px 14px #34343410;
-  background: #fff;
+  background: var(--surface);
 }
 .chat-composer .ant-input {
   border: 0;
@@ -1095,12 +1095,12 @@ body:has(.research-layout) .main-shell {
 .composer-tools .ant-select-selector {
   border: 0 !important;
   box-shadow: none !important;
-  background: #f6f6f6 !important;
+  background: var(--surface-2) !important;
 }
 .composer-hint {
   text-align: center;
   font-size: 10px;
-  color: #a1a1a1;
+  color: var(--muted);
   margin: 8px 0 0;
 }
 .jump-to-latest {
@@ -1116,19 +1116,19 @@ body:has(.research-layout) .main-shell {
   cursor: col-resize;
   display: flex;
   justify-content: center;
-  background: #fbfbfb;
+  background: var(--surface);
   touch-action: none;
 }
 .workspace-resizer span {
   width: 1px;
   height: 100%;
-  background: #e7e7e7;
+  background: var(--surface-3);
   transition: background 150ms;
 }
 .workspace-resizer:hover span,
 .workspace-resizer:focus-visible span {
   width: 3px;
-  background: #a2a2a2;
+  background: var(--muted);
 }
 .research-layout > .workspace-panel {
   flex: 1;
@@ -1136,20 +1136,20 @@ body:has(.research-layout) .main-shell {
   border: 0;
   border-radius: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
 }
 .research-layout .artifact-panel {
   container-type: inline-size;
 }
 .research-layout .workspace-panel-header {
   padding: 8px 16px;
-  border-bottom: 1px solid #efefef;
+  border-bottom: 1px solid var(--line);
 }
 .workspace-panel-header > div {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #757575;
+  color: var(--muted);
 }
 .research-layout .workspace-panel-header h2 {
   margin: 0;
@@ -1157,7 +1157,7 @@ body:has(.research-layout) .main-shell {
 }
 .workspace-file-count {
   font-size: 10px;
-  color: #a1a1a1;
+  color: var(--muted);
 }
 .research-layout .workspace-tabs > .ant-tabs-nav {
   padding: 0 14px;
@@ -1183,8 +1183,8 @@ body:has(.research-layout) .main-shell {
   gap: 7px;
   padding: 5px 12px;
   flex-shrink: 0;
-  border-top: 1px solid #efefef;
-  color: #a1a1a1;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
   font-size: 10px;
 }
 .workspace-status > span:last-child {
@@ -1203,7 +1203,7 @@ body:has(.research-layout) .main-shell {
 }
 .catalog-heading span {
   font-size: 11px;
-  color: #9d9d9d;
+  color: var(--muted);
 }
 .stage-card {
   display: flex;
@@ -1212,17 +1212,17 @@ body:has(.research-layout) .main-shell {
   gap: 13px;
   padding: 16px 12px;
   margin: 0 0 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface);
   text-align: left;
-  color: #4d4d4d;
+  color: var(--ink-2);
   cursor: pointer;
 }
 .stage-card:hover:not(:disabled),
 .stage-card.current {
-  background: #f9f9f9;
-  border-color: #bdbdbd;
+  background: var(--surface-2);
+  border-color: var(--line-strong);
 }
 .stage-card:disabled {
   opacity: 0.5;
@@ -1230,7 +1230,7 @@ body:has(.research-layout) .main-shell {
 }
 .stage-index {
   font-size: 12px;
-  color: #a3a3a3;
+  color: var(--muted);
 }
 .stage-card > span:nth-child(2) {
   flex: 1;
@@ -1243,7 +1243,7 @@ body:has(.research-layout) .main-shell {
 .stage-card small {
   display: block;
   margin-top: 5px;
-  color: #9f9f9f;
+  color: var(--muted);
   font-size: 10px;
   overflow-wrap: anywhere;
 }
@@ -1257,7 +1257,7 @@ body:has(.research-layout) .main-shell {
   gap: 9px;
   padding: 14px 4px;
   width: 100%;
-  border-bottom: 1px solid #efefef;
+  border-bottom: 1px solid var(--line);
 }
 .project-file-list .file-row-button > span:nth-child(2) {
   flex: 1;
@@ -1265,7 +1265,7 @@ body:has(.research-layout) .main-shell {
   overflow-wrap: anywhere;
 }
 .project-file-list .file-row-button small {
-  color: #a1a1a1;
+  color: var(--muted);
   font-size: 10px;
   white-space: nowrap;
 }
@@ -1300,7 +1300,7 @@ body:has(.research-layout) .main-shell {
     justify-content: center;
     gap: 8px;
     padding: 5px;
-    border-bottom: 1px solid #ebebeb;
+    border-bottom: 1px solid var(--line);
   }
   .mobile-pane-nav .ant-btn {
     height: 28px;
@@ -1389,12 +1389,12 @@ body:has(.research-layout) .main-shell {
 .research-layout.paper-focus .file-selector {
   padding: 6px 10px;
   gap: 6px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #e6e6e6;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
 }
 .paper-focus .file-selector > .ant-btn {
   flex-shrink: 0;
-  color: #707070;
+  color: var(--muted);
 }
 
 /* 方案阅读期间也保留文件入口，便于查看其他已生成的报告。 */
@@ -1408,7 +1408,7 @@ body:has(.research-layout) .main-shell {
   align-items: center;
   padding: 4px 12px;
   min-height: 36px;
-  border-bottom: 1px solid #e7eae8;
+  border-bottom: 1px solid var(--line);
 }
 .research-layout.proposal-focus .workspace-panel-header h2 {
   font-size: 12px;

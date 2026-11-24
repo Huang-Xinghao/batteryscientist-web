@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
+// Markdown reports open in the reading view; switch to the editor before editing.
+async function showEditor(page: Page) {
+  await page.locator('.artifact-actions .ant-segmented-item').filter({ hasText: '编辑' }).click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+}
+
 async function openReport(page: Page) {
   await page.goto('/');
   await page
@@ -9,8 +15,9 @@ async function openReport(page: Page) {
   if (page.viewportSize()!.width <= 700) {
     await page.getByRole('button', { name: '产物工作区', exact: true }).click();
   }
+  await expect(page.locator('.markdown-reading')).toBeVisible();
+  await showEditor(page);
   await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeVisible();
-  await expect(page.getByText('编辑', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
   return page.url().split('/').pop()!;
 }
@@ -62,6 +69,7 @@ for (const width of [1512, 360]) {
     if (width <= 700) {
       await page.getByRole('button', { name: '产物工作区', exact: true }).click();
     }
+    await showEditor(page);
     await page.locator('.monaco-editor').first().click();
     await page.keyboard.press('ControlOrMeta+End');
     await expect(page.locator('.monaco-editor').first()).toContainText(draftText);
@@ -100,8 +108,8 @@ test('editor stays available when a deployment removes deferred editor assets', 
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })
     .click();
+  await showEditor(page);
   const editor = page.locator('.monaco-editor').first();
-  await expect(editor).toBeVisible();
   await expect(page.locator('.editor-fallback')).toHaveCount(0);
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');

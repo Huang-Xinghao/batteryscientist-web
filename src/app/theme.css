@@ -1,0 +1,83 @@
+/*
+ * 石墨夜（Graphite Night）主题变量。
+ * 所有页面颜色都从这里取；改配色只需要改这一处。
+ * 文字色与背景的对比度均按 WCAG AA（正文 4.5:1）挑选。
+ */
+:root {
+  color-scheme: dark;
+
+  /* 底色层级：页面 < 面板 < 浮层 */
+  --bg: #0e1014;
+  --surface: #161920;
+  --surface-2: #1c2029;
+  --surface-3: #242935;
+  --rail: #08090c;
+
+  /* 分隔线 */
+  --line: #2a303b;
+  --line-strong: #3a4150;
+
+  /* 文字 */
+  --ink: #eceef3;
+  --ink-2: #c3c9d4;
+  --muted: #97a0af;
+  --faint: #6b7383;
+
+  /* 品牌：电光紫 → 薄荷青，用于“充电”渐变 */
+  --brand: #8f80ff;
+  --brand-strong: #b9afff;
+  --brand-soft: #221d45;
+  --on-brand: #0e1014;
+  --charge-a: #8f80ff;
+  --charge-b: #3de0c4;
+  --charge: linear-gradient(90deg, var(--charge-a), var(--charge-b));
+
+  /* 需要用户处理 */
+  --attn: #ffb547;
+  --attn-soft: #35280f;
+  --attn-ink: #ffd08a;
+
+  /* 状态 */
+  --ok: #3de0c4;
+  --ok-soft: #0f2e2a;
+  --danger: #ff6b7a;
+  --danger-soft: #3a1419;
+
+  /* 光晕 */
+  --glow: rgba(143, 128, 255, 0.55);
+  --glow-b: rgba(61, 224, 196, 0.5);
+  --shadow-lg: 0 18px 48px -18px rgba(0, 0, 0, 0.75);
+
+  /* 字体 */
+  --font-sans:
+    'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* 动效曲线 */
+  --ease-spring: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --ease-out: cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+html,
+body,
+#root {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--brand-soft);
+  color: var(--ink);
+}
+
+* {
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

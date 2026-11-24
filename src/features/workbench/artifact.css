@@ -51,7 +51,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--surface);
 }
 .paper-editor-tools {
   display: flex;
@@ -59,8 +59,8 @@
   gap: 3px;
   min-height: 32px;
   padding: 2px 10px;
-  border-bottom: 1px solid #efefef;
-  color: #858585;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -69,7 +69,7 @@
 }
 .paper-editor-tools > span.paper-editor-shortcut {
   margin-left: auto;
-  color: #a0a0a0;
+  color: var(--muted);
 }
 .paper-editor-surface {
   flex: 1;
@@ -81,9 +81,9 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 5px 12px;
-  border-top: 1px solid #efefef;
-  background: #fbfbfb;
-  color: #858585;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
   font: 10px/1.4 monospace;
   flex-shrink: 0;
 }
@@ -97,13 +97,13 @@
 .paper-pane-divider {
   cursor: col-resize;
   touch-action: none;
-  background: #f4f4f4;
-  border-inline: 1px solid #e6e6e6;
+  background: var(--surface-2);
+  border-inline: 1px solid var(--line);
   z-index: 1;
 }
 .paper-pane-divider:hover,
 .paper-pane-divider:focus-visible {
-  background: #d1d1d1;
+  background: var(--line-strong);
   outline: 0;
 }
 .latex-workspace:has(.paper-pane-divider:active) iframe {
@@ -131,48 +131,48 @@
 /* A compact writing surface: muted chrome, green actions and colored TeX syntax. */
 .latex-artifact .artifact-toolbar {
   min-height: 40px;
-  background: #f2f2f2;
-  border-bottom: 1px solid #e2e2e2;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
   gap: 12px;
 }
 .latex-artifact .artifact-filename {
-  color: #4b4b4b;
+  color: var(--ink-2);
   font: 600 12px/1.5 monospace;
 }
 .latex-artifact .artifact-filename > .anticon {
-  color: #717171;
+  color: var(--muted);
 }
 .latex-artifact .artifact-toolbar .ant-btn {
-  border-color: #dcdcdc;
+  border-color: var(--line);
   border-radius: 5px;
-  color: #5c5c5c;
-  background: #ffffffb3;
+  color: var(--ink-2);
+  background: rgba(0, 0, 0, 0.702);
 }
 .latex-artifact .artifact-toolbar .ant-btn-primary:not(:disabled) {
-  color: white;
-  background: #626262;
-  border-color: #626262;
+  color: var(--on-brand);
+  background: var(--muted);
+  border-color: var(--muted);
 }
 .latex-artifact .artifact-toolbar .ant-btn:disabled {
-  background: #ebebeb;
-  color: #a3a3a3;
+  background: var(--surface-3);
+  color: var(--muted);
 }
 .latex-artifact .latex-source {
-  background: #fdfdfd;
+  background: var(--surface);
   border: 0;
 }
 .latex-artifact .paper-code-editor {
-  background: #fdfdfd;
+  background: var(--surface);
 }
 .latex-artifact .paper-editor-tools {
   min-height: 35px;
   padding: 2px 10px;
-  border-bottom-color: #e6e6e6;
-  background: #f7f7f7;
+  border-bottom-color: var(--line);
+  background: var(--surface-2);
 }
 .paper-editor-tools > .paper-editor-language {
   margin: 0 10px 0 0;
-  color: #585858;
+  color: var(--ink-2);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -187,7 +187,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #888888;
+  background: var(--muted);
 }
 .paper-sync-state.is-dirty::before {
   background: #c38d3c;
@@ -196,12 +196,12 @@
   min-height: 25px;
   align-items: center;
   padding: 3px 12px;
-  background: #f1f1f1;
-  border-color: #e6e6e6;
-  color: #7e7e7e;
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--muted);
 }
 .latex-artifact .latex-pdf {
-  background: #ebebeb;
+  background: var(--surface-3);
 }
 .latex-artifact .latex-pdf .pane-heading {
   display: flex;
@@ -209,17 +209,17 @@
   gap: 10px;
   min-height: 35px;
   padding: 2px 10px;
-  background: #f2f2f2;
-  border-color: #e1e1e1;
+  background: var(--surface-2);
+  border-color: var(--line);
 }
 .pdf-pane-label {
   font-size: 11px;
   font-weight: 600;
-  color: #6f6f6f;
+  color: var(--muted);
 }
 .pdf-stale-indicator {
   font-size: 10px;
-  color: #9b773a;
+  color: oklch(0.82 0.091 78.7);
   white-space: nowrap;
 }
 .latex-artifact .latex-pdf .ant-select {
@@ -235,14 +235,14 @@
 .latex-artifact .latex-pdf .ant-empty {
   margin: auto;
   padding: 24px;
-  color: #949494;
+  color: var(--muted);
 }
 .latex-artifact .paper-pane-divider {
-  background: #e5e5e5;
-  border-color: #d9d9d9;
+  background: var(--surface-3);
+  border-color: var(--line);
 }
 .latex-artifact .paper-pane-divider:hover {
-  background: #b0b0b0;
+  background: var(--line-strong);
 }
 @media (min-width: 901px) {
   @container (min-width: 621px) {
@@ -288,13 +288,13 @@
 
 .markdown-code-editor .paper-editor-tools,
 .markdown-code-editor .paper-editor-status {
-  background: #f8f8f8;
-  color: #616161;
+  background: var(--surface-2);
+  color: var(--ink-2);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   font-size: 11px;
 }
 .markdown-code-editor .paper-editor-language {
-  color: #3b3b3b;
+  color: var(--ink-2);
   font-weight: 500;
   letter-spacing: 0.4px;
 }
@@ -310,25 +310,25 @@
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
   font-size: 14px;
   line-height: 1.65;
-  color: #3b3b3b;
+  color: var(--ink-2);
   padding: 26px clamp(20px, 4vw, 56px) 56px;
   max-width: 980px;
 }
 .artifact-panel .artifact-content > .markdown :is(h1, h2, h3, h4) {
   font-weight: 600;
   line-height: 1.3;
-  color: #1f1f1f;
+  color: var(--ink);
   margin: 24px 0 16px;
 }
 .artifact-panel .artifact-content > .markdown h1 {
   font-size: 2em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--line);
 }
 .artifact-panel .artifact-content > .markdown h2 {
   font-size: 1.5em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--line);
 }
 .artifact-panel .artifact-content > .markdown h3 {
   font-size: 1.25em;
@@ -344,16 +344,16 @@
   padding: 16px;
   line-height: 1.6;
   border-radius: 3px;
-  background: #f5f5f5;
+  background: var(--surface-2);
 }
 .artifact-panel .artifact-content > .markdown a {
-  color: #006ab1;
+  color: oklch(0.82 0.138 248.1);
 }
 .artifact-panel .artifact-content > .markdown table {
   font-size: 14px;
 }
 .artifact-panel .artifact-content > .markdown blockquote {
-  color: #616161;
-  border-left-color: #007acc80;
-  background: #f5f8fb;
+  color: var(--ink-2);
+  border-left-color: oklch(0.7 0.155 248.5 / 0.502);
+  background: var(--surface-2);
 }

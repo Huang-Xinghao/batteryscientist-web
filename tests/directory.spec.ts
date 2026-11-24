@@ -31,7 +31,7 @@ for (const width of [1512, 390]) {
     await expect(page.getByText('没有匹配的产物')).toBeVisible();
     await picker.fill('RESEARCH_REPORT');
     await page.locator('.directory-file[title="literature/RESEARCH_REPORT.md"]').click();
-    await expect(page.locator('.monaco-editor').first()).toContainText('电池寿命研究');
+    await expect(page.locator('.markdown-reading')).toContainText('电池寿命研究');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

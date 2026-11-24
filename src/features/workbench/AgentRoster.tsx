@@ -83,6 +83,7 @@ export function AgentRoster({
               key={role}
               className={`agent-role-card ${working ? 'is-working' : ''}`}
               aria-label={`查看${agentNames[role]}`}
+              title={agentDescriptions[role]}
               aria-pressed={current === role}
               onClick={() => onSelect(role)}
             >

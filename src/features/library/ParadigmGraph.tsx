@@ -30,10 +30,10 @@ import '@xyflow/react/dist/style.css';
 import './graph.css';
 
 const categories = [
-  { id: 'papers', name: '论文', color: '#27272a', symbol: '论' },
-  { id: 'ideas', name: '研究思路', color: '#71717a', symbol: '思' },
-  { id: 'experiments', name: '实验', color: '#52525b', symbol: '验' },
-  { id: 'claims', name: '论断', color: '#a1a1aa', symbol: '证' },
+  { id: 'papers', name: '论文', color: '#8f80ff', symbol: '论' },
+  { id: 'ideas', name: '研究思路', color: '#3de0c4', symbol: '思' },
+  { id: 'experiments', name: '实验', color: '#ffb547', symbol: '验' },
+  { id: 'claims', name: '论断', color: '#7cc8ff', symbol: '证' },
 ];
 const relations: Record<string, string> = {
   inspired_by: '启发自',
@@ -191,16 +191,16 @@ function GraphBrowser({
         target: e.target,
         label: highlighted ? relations[e.type] || e.type : undefined,
         style: {
-          stroke: highlighted ? '#27272a' : '#b4b4bc',
+          stroke: highlighted ? '#b9afff' : '#3a4150',
           strokeWidth: highlighted ? 2 : 1.1,
           opacity:
             (!active || highlighted) && matching.has(e.source) && matching.has(e.target)
               ? 0.85
               : 0.12,
         },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#93939e' },
-        labelStyle: { fill: '#3f3f46', fontSize: 11 },
-        labelBgStyle: { fill: '#fafafa', fillOpacity: 0.95 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#5b6372' },
+        labelStyle: { fill: '#c3c9d4', fontSize: 11 },
+        labelBgStyle: { fill: '#161920', fillOpacity: 0.95 },
       };
     }) || [];
   function locate(id: string) {
@@ -272,6 +272,7 @@ function GraphBrowser({
       ) : (
         <div className="paradigm-canvas">
           <ReactFlow
+            colorMode="dark"
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
@@ -289,15 +290,16 @@ function GraphBrowser({
             onPaneClick={() => setFocus('')}
             proOptions={{ hideAttribution: true }}
           >
-            <Background variant={BackgroundVariant.Dots} color="#dedee3" gap={22} size={1} />
+            <Background variant={BackgroundVariant.Dots} color="#2a303b" gap={22} size={1} />
             <Controls showInteractive={false} fitViewOptions={{ padding: 0.15 }} />
             <MiniMap
+              bgColor="#161920"
+              maskColor="rgba(8, 9, 12, 0.72)"
               pannable
               zoomable
               nodeColor={(node) =>
-                categories.find((c) => c.id === node.data.category)?.color || '#71717a'
+                categories.find((c) => c.id === node.data.category)?.color || '#97a0af'
               }
-              maskColor="rgba(244,247,240,0.75)"
             />
           </ReactFlow>
           {(search || category) && (

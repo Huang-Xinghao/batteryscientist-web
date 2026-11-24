@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Form, Input, Modal, Segmented, Skeleton, Tooltip } from 'antd';
 import {
@@ -13,11 +13,39 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  ThunderboltFilled,
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { active, api } from '../../api/client';
 import { Status } from '../../components/Status';
 import { formatDate } from '../../lib/date';
+import { CountUp } from '../../components/fx/CountUp';
+import { ParticleField } from '../../components/fx/ParticleField';
+import { burstFrom } from '../../components/fx/burst';
+import './projects.css';
+
+const STAGES = [
+  'literature',
+  'data_search',
+  'ideas',
+  'refine',
+  'experiment_plan',
+  'experiment_bridge',
+  'paper_plan',
+  'paper_figure',
+  'paper_write',
+  'paper_compile',
+  'improvement',
+];
+
+/** A short project name from the first line of a research question. */
+function nameFromGoal(goal: string) {
+  const line = goal
+    .trim()
+    .split(/\n/)[0]
+    .replace(/[。．.！!？?]+$/, '');
+  return line.length > 24 ? `${line.slice(0, 24)}…` : line;
+}
 export function Projects() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -32,6 +60,37 @@ export function Projects() {
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [form] = Form.useForm<{ name: string; path?: string }>();
+  const [goal, setGoal] = useState('');
+  const [mode, setMode] = useState<'expert' | 'auto'>('expert');
+  const startButton = useRef<HTMLButtonElement>(null);
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health, staleTime: 60000 });
+  const labels = Object.fromEntries((health.data?.nodes || []).map((n) => [n.id, n.label]));
+  const start = useMutation({
+    mutationFn: async (question: string) => {
+      const project = await api.create({ name: nameFromGoal(question) });
+      try {
+        await api.message(project.id, { prompt: question, mode });
+      } catch (error) {
+        message.error(`项目已创建，但研究问题没有提交：${(error as Error).message}`);
+      }
+      return project;
+    },
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setGoal('');
+      navigate(`/projects/${project.id}`);
+    },
+    onError: (error: Error) => message.error(error.message),
+  });
+  function startResearch() {
+    const question = goal.trim();
+    if (!question) {
+      message.info('先写下你想研究的问题');
+      return;
+    }
+    burstFrom(startButton.current, { count: 90, power: 1.1 });
+    start.mutate(question);
+  }
   const create = useMutation({
     mutationFn: api.create,
     onSuccess: (p) => {
@@ -70,28 +129,93 @@ export function Projects() {
   };
   return (
     <div className="page projects-page">
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">YOUR RESEARCH, IN PROGRESS</div>
-          <h1>
-            研究项目<span className="title-dot">.</span>
+      <section className="research-hero" aria-labelledby="research-hero-title">
+        <ParticleField />
+        <div className="research-hero-body">
+          <h1 id="research-hero-title" className="gradient-text">
+            想研究什么？
           </h1>
-          <p className="page-description">从研究问题出发，管理每一步探索与发现。</p>
+          <p>
+            写下研究问题，主控 Agent 会先确认范围，再从文献研究开始推进。问题不清楚时它会先追问你。
+          </p>
+          <Input.TextArea
+            aria-label="研究问题"
+            className="research-hero-input"
+            placeholder="例如：用早期循环数据预测磷酸铁锂电池的剩余寿命，并验证跨电芯泛化"
+            value={goal}
+            onChange={(event) => setGoal(event.target.value)}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+            maxLength={20000}
+            disabled={start.isPending}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                startResearch();
+              }
+            }}
+          />
+          <div className="research-hero-actions">
+            <Segmented
+              aria-label="协作方式"
+              value={mode}
+              onChange={(value) => setMode(value as 'expert' | 'auto')}
+              options={[
+                { value: 'expert', label: '每阶段由我审阅' },
+                { value: 'auto', label: '全自动' },
+              ]}
+            />
+            <span className="research-hero-hint">
+              {mode === 'expert'
+                ? '每个阶段完成后停下来，等你确认再继续'
+                : '主控自己验收并推进，只在需要你决定时提问'}
+            </span>
+            <Button icon={<FolderOpenOutlined />} onClick={() => showCreate(true)}>
+              导入项目
+            </Button>
+            <Button icon={<PlusOutlined />} onClick={() => showCreate(false)}>
+              新建研究项目
+            </Button>
+            <Button
+              ref={startButton}
+              type="primary"
+              size="large"
+              icon={<ThunderboltFilled />}
+              loading={start.isPending}
+              onClick={startResearch}
+            >
+              开始研究
+            </Button>
+          </div>
         </div>
-        <div className="heading-actions">
-          <Button icon={<FolderOpenOutlined />} onClick={() => showCreate(true)}>
-            导入项目
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={() => showCreate(false)}
-          >
-            新建研究项目
-          </Button>
-        </div>
-      </div>
+      </section>
+      {all.some((p) => p.status === 'awaiting_user') && (
+        <section className="todo-list" aria-labelledby="todo-title">
+          <h2 id="todo-title">等你处理</h2>
+          {all
+            .filter((p) => p.status === 'awaiting_user')
+            .map((p) => {
+              const node = p.state.expert_checkpoint?.node || p.state.current_node || '';
+              return (
+                <Link key={p.id} to={`/projects/${p.id}`} className="todo-item spotlight fx-pop">
+                  <span className="todo-dot fx-ping" />
+                  <span className="todo-text">
+                    <strong>
+                      {p.name} 的{labels[node] || '当前阶段'}等你审阅
+                    </strong>
+                    <small>
+                      {p.pending_questions?.length
+                        ? `有 ${p.pending_questions.length} 个问题待回答`
+                        : '查看产物后批准或提出修改'}
+                    </small>
+                  </span>
+                  <span className="todo-go">
+                    去审阅 <ArrowRightOutlined />
+                  </span>
+                </Link>
+              );
+            })}
+        </section>
+      )}
       <div className="overview-strip">
         {[
           ['全部项目', all.length, '持续积累研究成果'],
@@ -111,7 +235,7 @@ export function Projects() {
               {label}
             </div>
             <strong>
-              {value}
+              <CountUp value={Number(value)} />
               <small>{hint}</small>
             </strong>
           </div>
@@ -172,27 +296,16 @@ export function Projects() {
       ) : (
         <div className="project-grid">
           {filtered.map((p, index) => {
-            const done = new Set(
-              p.state.history
-                ?.map((h) => h.node)
-                .filter((n) =>
-                  [
-                    'literature',
-                    'data_search',
-                    'ideas',
-                    'refine',
-                    'experiment_plan',
-                    'experiment_bridge',
-                    'paper_plan',
-                    'paper_figure',
-                    'paper_write',
-                    'paper_compile',
-                    'improvement',
-                  ].includes(n || ''),
-                ),
-            ).size;
+            const history = new Set(p.state.history?.map((h) => h.node));
+            const done = STAGES.filter((n) => history.has(n)).length;
+            const current = p.state.current_node || '';
             return (
-              <Link to={`/projects/${p.id}`} className="project-card" key={p.id}>
+              <Link
+                to={`/projects/${p.id}`}
+                className="project-card spotlight tilt"
+                key={p.id}
+                style={{ animationDelay: `${index * 0.06}s` }}
+              >
                 <div className="project-card-top">
                   <span className={`project-icon tone-${index % 3}`}>
                     <FolderOpenOutlined />
@@ -205,14 +318,27 @@ export function Projects() {
                 </p>
                 <div className="project-phase">
                   <span>
-                    {p.state.current_node
-                      ? `当前阶段 · ${p.state.current_node.replaceAll('_', ' ')}`
-                      : '等待配置研究目标'}
+                    {current ? `当前阶段：${labels[current] || current}` : '等待配置研究目标'}
                   </span>
                   <span>{done}/11</span>
                 </div>
-                <div className="mini-progress">
-                  <span style={{ width: `${(done / 11) * 100}%` }} />
+                <div className="mini-track" aria-hidden="true">
+                  {STAGES.map((n) => (
+                    <span
+                      key={n}
+                      className={
+                        history.has(n)
+                          ? 'done'
+                          : n === current
+                            ? p.status === 'awaiting_user'
+                              ? 'review'
+                              : active(p.status)
+                                ? 'running'
+                                : ''
+                            : ''
+                      }
+                    />
+                  ))}
                 </div>
                 <div className="project-card-bottom">
                   <span>
@@ -226,7 +352,7 @@ export function Projects() {
               </Link>
             );
           })}
-          <button className="new-project-card" onClick={() => showCreate(false)}>
+          <button className="new-project-card spotlight" onClick={() => showCreate(false)}>
             <span>
               <FolderAddOutlined />
             </span>
@@ -235,10 +361,6 @@ export function Projects() {
           </button>
         </div>
       )}
-      <div className="page-footnote">
-        <span className="connection-dot online" />
-        研究文件保存在本机 · 每一次探索都有迹可循
-      </div>
       <Modal
         title={importing ? '导入已有项目' : '新建研究项目'}
         open={open}
@@ -251,7 +373,7 @@ export function Projects() {
         <p className="muted">
           {importing
             ? '登记项目目录，保留其中已有的研究文件和运行状态。'
-            : '先为研究创建一个空间，再配置研究目标和运行方式。'}
+            : '先创建一个空项目，进入后再写研究问题。想直接开始，可以在上方输入研究问题。'}
         </p>
         <Form form={form} layout="vertical" onFinish={(values) => create.mutate(values)}>
           <Form.Item

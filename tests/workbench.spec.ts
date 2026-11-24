@@ -56,6 +56,12 @@ async function mockCoordinatorReply(page: import('@playwright/test').Page) {
   });
 }
 
+// Markdown reports open in the reading view; switch to the editor before editing.
+async function showEditor(page: import('@playwright/test').Page) {
+  await page.locator('.artifact-actions .ant-segmented-item').filter({ hasText: '编辑' }).click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+}
+
 async function openFixture(page: import('@playwright/test').Page, requireEditor = true) {
   await page.goto('/');
   await page
@@ -67,7 +73,7 @@ async function openFixture(page: import('@playwright/test').Page, requireEditor 
     await expect(page.getByRole('navigation', { name: '工作台视图' })).toBeVisible();
     await page.getByRole('button', { name: '产物工作区', exact: true }).click();
   }
-  if (requireEditor) await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  if (requireEditor) await showEditor(page);
 }
 
 test('lists real projects, searches, and opens a research report', async ({ page }) => {
@@ -79,7 +85,7 @@ test('lists real projects, searches, and opens a research report', async ({ page
   await expect(page.getByText('没有匹配的项目')).toBeVisible();
   await page.getByPlaceholder('搜索项目或研究目标').fill('电池');
   await page.locator('a.project-card').click();
-  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  await expect(page.locator('.markdown-reading')).toContainText('电池寿命研究');
   await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   await expect(page.getByText('优先研究哪一个泛化问题？')).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-tested.png', fullPage: true });
@@ -112,7 +118,7 @@ test('edits and saves a report through the API', async ({ page }) => {
   await page.getByRole('button', { name: /保\s*存/ }).click();
   await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
   await page.reload();
-  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
+  await expect(page.locator('.markdown-reading')).toContainText('浏览器保存验证。');
 });
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
@@ -197,7 +203,7 @@ test('expert questions have a visible entry and collaboration mode can be chosen
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('模式选择测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
-  await page.getByRole('button', { name: '协作方式设置' }).click();
+  await page.getByRole('button', { name: '运行设置' }).click();
   await expect(page.getByRole('combobox', { name: '协作方式', exact: true })).toBeVisible();
   await expect(page.getByText('专家模式 · 每个阶段审阅后继续（推荐）')).toBeVisible();
 });
@@ -548,7 +554,7 @@ test('paper divider resizes with the keyboard and resets on double click', async
 test('gallery filters images, recovers failed loads and opens the preview', async ({ page }) => {
   await openFixture(page);
   await page.route(/\/api\/projects\/.*\/download\?.*test.png/, (route) => route.abort());
-  await page.getByRole('tab', { name: '图片画廊' }).click();
+  await page.getByRole('tab', { name: '图片', exact: true }).click();
   await expect(page.getByText('图片加载失败', { exact: true })).toBeVisible();
   await page.unroute(/\/api\/projects\/.*\/download\?.*test.png/);
   await page.getByRole('button', { name: /重新加载/ }).click();
@@ -582,7 +588,9 @@ test('message copy and reuse protect an existing composer draft', async ({ page,
   await expect(reply).toContainText('我是 BatteryScientist');
   await reply.getByRole('button', { name: '复制消息', exact: true }).click();
   await expect(reply.getByRole('button', { name: '消息已复制' })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('我是 BatteryScientist');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    '我是 BatteryScientist',
+  );
   await draft.fill('保留这条未发送的指令');
   await page.getByRole('button', { name: '修改这条指令' }).click();
   await expect(page.getByRole('dialog')).toContainText('替换输入框中未发送的草稿？');
@@ -721,10 +729,9 @@ for (const width of [1512, 390]) {
     ).toBeVisible();
     await expect(page.getByRole('region', { name: '方案任务进度' })).toHaveCount(0);
     await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
-    await page.getByRole('tab', { name: '阶段产物', exact: true }).click();
-    await page.locator('.stage-card').filter({ hasText: 'literature/RESEARCH_REPORT.md' }).click();
+    await page.getByRole('button', { name: /^文献研究，/ }).click();
     await expect(page.locator('.artifact-filename')).toHaveText('RESEARCH_REPORT.md');
-    await expect(page.locator('.monaco-editor').first()).toBeVisible();
+    await showEditor(page);
     await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
   });
 }

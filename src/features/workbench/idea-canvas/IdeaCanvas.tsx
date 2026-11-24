@@ -694,9 +694,10 @@ function CanvasEditor({
   const methodGraph = (
     <div className="idea-graph" ref={graph}>
       <ReactFlow<ModuleNode>
+        colorMode="dark"
         defaultEdgeOptions={{
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#819a88', strokeWidth: 1.6 },
+          style: { stroke: '#5b6372', strokeWidth: 1.6 },
         }}
         nodes={draft.nodes}
         edges={draft.edges.map((e) => ({

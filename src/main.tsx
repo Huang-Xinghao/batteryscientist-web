@@ -2,15 +2,23 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { App as AntApp, ConfigProvider } from 'antd';
+import { App as AntApp, ConfigProvider, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { App } from './app/App';
 import { AuthGate } from './features/auth/AuthGate';
 import 'antd/dist/reset.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/500.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-mono/400.css';
 import 'katex/dist/katex.min.css';
 import './app/styles.css';
 import './features/workbench/workbench.css';
 import './app/monochrome.css';
+import './app/theme.css';
+import './app/effects.css';
+import './app/shell.css';
+import './features/workbench/workbench-fx.css';
 const router = createBrowserRouter([{ path: '*', element: <App /> }]);
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,16 +32,33 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ConfigProvider
         locale={zhCN}
         theme={{
+          algorithm: antdTheme.darkAlgorithm,
           token: {
-            colorPrimary: '#3b3b42',
-            borderRadius: 8,
-            colorText: '#27272a',
-            colorBgLayout: '#fafafa',
-            colorBorder: '#e4e4e7',
-            colorTextSecondary: '#71717a',
-            colorLink: '#27272a',
+            colorPrimary: '#8f80ff',
+            colorInfo: '#8f80ff',
+            colorSuccess: '#3de0c4',
+            colorWarning: '#ffb547',
+            colorError: '#ff6b7a',
+            colorLink: '#b9afff',
+            colorText: '#eceef3',
+            colorTextSecondary: '#97a0af',
+            colorTextTertiary: '#7d8696',
+            colorBgBase: '#0e1014',
+            colorBgLayout: '#0e1014',
+            colorBgContainer: '#161920',
+            colorBgElevated: '#1c2029',
+            colorBorder: '#3a4150',
+            colorBorderSecondary: '#2a303b',
+            borderRadius: 9,
             fontFamily:
-              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+              "'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, sans-serif",
+          },
+          components: {
+            Button: { primaryColor: '#0e1014', fontWeight: 500 },
+            Segmented: { itemSelectedBg: '#242935', trackBg: '#1c2029' },
+            Tabs: { inkBarColor: '#8f80ff', itemSelectedColor: '#eceef3' },
+            Modal: { contentBg: '#161920', headerBg: '#161920' },
+            Drawer: { colorBgElevated: '#161920' },
           },
         }}
       >

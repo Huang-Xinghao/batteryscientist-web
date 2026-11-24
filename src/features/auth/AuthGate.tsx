@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Card, Form, Input, Spin } from 'antd';
 import { request } from '../../api/client';
+import { ParticleField } from '../../components/fx/ParticleField';
 
 type Session = { enabled: boolean; authenticated: boolean };
 export function AuthGate({ children }: { children: ReactNode }) {
@@ -42,7 +43,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!session.data.authenticated)
     return (
       <div className="auth-screen">
-        <Card title="BatteryScientist · 科研工作台" className="auth-card">
+        <ParticleField density={1.2} />
+        <Card title="BatteryScientist · 科研工作台" className="auth-card spotlight">
           <p>登录你的研究空间</p>
           <Form layout="vertical" onFinish={(values) => login.mutate(values)}>
             <Form.Item

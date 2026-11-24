@@ -2,10 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, Result, Spin } from 'antd';
 import {
   ApartmentOutlined,
-  ArrowUpOutlined,
   BookOutlined,
   DatabaseOutlined,
-  DeploymentUnitOutlined,
   ExperimentOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
@@ -15,84 +13,121 @@ import { Projects } from '../features/projects/Projects';
 import { Workbench } from '../features/workbench/Workbench';
 import { Library } from '../features/library/Library';
 import { Laboratory } from '../features/laboratory/Laboratory';
+import { motion } from 'motion/react';
+import { AmbientEffects } from '../components/fx/AmbientEffects';
+import { useReducedMotion } from '../components/fx/motion';
+
+const navItems = [
+  {
+    to: '/',
+    label: '研究项目',
+    short: '研究项目',
+    icon: <ApartmentOutlined />,
+    match: (path: string) => path === '/' || path.startsWith('/projects'),
+  },
+  {
+    to: '/libraries/paradigms',
+    label: '电池范式库',
+    short: '范式库',
+    icon: <BookOutlined />,
+    match: (path: string) => path === '/libraries/paradigms',
+  },
+  {
+    to: '/libraries/battery',
+    label: '电池资源库',
+    short: '资源库',
+    icon: <DatabaseOutlined />,
+    match: (path: string) => path === '/libraries/battery',
+  },
+  {
+    to: '/laboratory',
+    label: '物理实验室',
+    short: '实验室',
+    icon: <ExperimentOutlined />,
+    match: (path: string) => path.startsWith('/laboratory'),
+  },
+];
+
+/** Battery outline whose charge glows with the brand gradient. */
+function BatteryMark() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 30 30" aria-hidden="true" className="battery-mark">
+      <defs>
+        <linearGradient id="battery-mark-gradient" x1="0" x2="1">
+          <stop offset="0" stopColor="var(--charge-a)" />
+          <stop offset="1" stopColor="var(--charge-b)" />
+        </linearGradient>
+      </defs>
+      <rect
+        x="3"
+        y="7"
+        width="21"
+        height="16"
+        rx="3.5"
+        fill="none"
+        stroke="url(#battery-mark-gradient)"
+        strokeWidth="2"
+      />
+      <rect x="24.5" y="12" width="2.5" height="6" rx="1" fill="var(--charge-b)" />
+      <rect
+        className="battery-mark-charge"
+        x="6.5"
+        y="10.5"
+        width="14"
+        height="9"
+        rx="1.5"
+        fill="url(#battery-mark-gradient)"
+      />
+    </svg>
+  );
+}
 export function App() {
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000 });
   const location = useLocation();
+  const reduced = useReducedMotion();
+  // Only animate when the page itself changes, not on query-string updates.
+  const routeKey = location.pathname.startsWith('/projects/') ? 'project' : location.pathname;
   return (
     <div className="shell">
-      <aside className="sidebar">
-        <Link to="/" className="brand">
-          <span className="brand-mark">
-            <DeploymentUnitOutlined />
-          </span>
-          <div>
-            BatteryScientist<small>RESEARCH WORKSPACE</small>
-          </div>
-        </Link>
-        <div className="workspace-label">
-          <span className="workspace-avatar">研</span>
-          <div>
-            我的研究空间<small>本地工作台</small>
-          </div>
-          <span className="version">v0.1</span>
-        </div>
-        <div className="nav-caption">工作空间</div>
+      <AmbientEffects />
+      <aside className="sidebar rail" aria-label="主导航">
         <Link
-          className={`nav-item ${location.pathname === '/' || location.pathname.startsWith('/projects') ? 'selected' : ''}`}
           to="/"
-          aria-label="研究项目"
-          title="研究项目"
+          className="rail-brand"
+          aria-label="BatteryScientist 首页"
+          title="BatteryScientist"
         >
-          <ApartmentOutlined />
-          研究项目<span className="nav-arrow">↗</span>
+          <BatteryMark />
         </Link>
+        <nav className="rail-nav">
+          {navItems.map((item) => (
+            <Link
+              key={item.to}
+              className={`nav-item rail-link ${item.match(location.pathname) ? 'selected' : ''}`}
+              to={item.to}
+              aria-label={item.label}
+              title={item.label}
+            >
+              {item.icon}
+              <span>{item.short}</span>
+            </Link>
+          ))}
+        </nav>
         <Link
-          className={`nav-item ${location.pathname === '/libraries/paradigms' ? 'selected' : ''}`}
-          to="/libraries/paradigms"
-          aria-label="电池范式库"
-          title="电池范式库"
-        >
-          <BookOutlined />
-          电池范式库
-        </Link>
-        <Link
-          className={`nav-item ${location.pathname === '/libraries/battery' ? 'selected' : ''}`}
-          to="/libraries/battery"
-          aria-label="电池资源库"
-          title="电池资源库"
-        >
-          <DatabaseOutlined />
-          电池资源库
-        </Link>
-        <Link
-          className={`nav-item ${location.pathname.startsWith('/laboratory') ? 'selected' : ''}`}
-          to="/laboratory"
-          aria-label="物理实验室"
-          title="物理实验室"
-        >
-          <ExperimentOutlined />
-          物理实验室
-        </Link>
-        <div className="sidebar-note">
-          <BookOutlined />
-          <p>让研究，循证向前。</p>
-          <span>
-            从一个问题，到一篇论文。
-            <br />
-            每个阶段都有据可查。
-          </span>
-        </div>
-        <Link
-          className={`nav-item settings-link ${location.pathname === '/settings' ? 'selected' : ''}`}
+          className={`nav-item rail-link settings-link ${location.pathname === '/settings' ? 'selected' : ''}`}
           to="/settings"
+          aria-label="工作台设置"
+          title="工作台设置"
         >
           <SettingOutlined />
-          工作台设置
+          <span>设置</span>
         </Link>
-        <div className="sidebar-footer">
-          <span className={`connection-dot ${health.isSuccess ? 'online' : ''}`} />
-          {health.isSuccess ? '已连接研究引擎' : '研究引擎未连接'}
-          <ArrowUpOutlined rotate={45} />
+        <div
+          className="sidebar-footer rail-status"
+          title={health.isSuccess ? '已连接研究引擎' : '研究引擎未连接'}
+        >
+          <span className={`connection-dot ${health.isSuccess ? 'online fx-ping' : ''}`} />
+          <span>{health.isSuccess ? '已连接' : '未连接'}</span>
         </div>
       </aside>
       <main
@@ -108,66 +143,74 @@ export function App() {
             action={<Button onClick={() => health.refetch()}>重试</Button>}
           />
         )}
-        <Routes>
-          <Route path="/" element={<Projects />} />
-          <Route path="/projects/:id" element={<Workbench nodes={health.data?.nodes || []} />} />
-          <Route path="/libraries/paradigms" element={<Library kind="paradigms" />} />
-          <Route path="/libraries/battery" element={<Library kind="battery" />} />
-          <Route path="/laboratory" element={<Laboratory />} />
-          <Route
-            path="/settings"
-            element={
-              <div className="page">
-                <div className="eyebrow">PREFERENCES</div>
-                <h1>工作台设置</h1>
-                <p className="page-description">运行环境与服务连接</p>
-                {health.isPending ? (
-                  <Spin />
-                ) : health.data ? (
-                  <div className="settings-card">
-                    <h3>研究引擎</h3>
-                    <dl>
-                      <dt>运行解释器</dt>
-                      <dd>
-                        <code>{health.data.runtime}</code>
-                      </dd>
-                      <dt>项目根目录</dt>
-                      <dd>
-                        {health.data.project_roots.map((p) => (
-                          <div key={p}>
-                            <code>{p}</code>
-                          </div>
-                        ))}
-                      </dd>
-                      <dt>并发策略</dt>
-                      <dd>
-                        同时运行 {health.data.concurrency} 个项目；项目内实验按现有队列策略调度。
-                      </dd>
-                      <dt>接口文档</dt>
-                      <dd>
-                        <a href="/api/docs" target="_blank" rel="noopener noreferrer">
-                          查看 OpenAPI 文档 ↗
-                        </a>
-                      </dd>
-                    </dl>
-                    <Alert
-                      type="info"
-                      showIcon
-                      message="模型密钥保存在后端环境配置中。项目计算策略仍由 project-config.json 管理。"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <Result status="404" title="页面不存在" extra={<Link to="/">返回研究项目</Link>} />
-            }
-          />
-          <Route path="/projects" element={<Navigate to="/" replace />} />
-        </Routes>
+        <motion.div
+          key={routeKey}
+          className="route-frame"
+          initial={reduced ? false : { opacity: 0, y: 14, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.45, ease: [0.2, 0.9, 0.2, 1] }}
+        >
+          <Routes location={location}>
+            <Route path="/" element={<Projects />} />
+            <Route path="/projects/:id" element={<Workbench nodes={health.data?.nodes || []} />} />
+            <Route path="/libraries/paradigms" element={<Library kind="paradigms" />} />
+            <Route path="/libraries/battery" element={<Library kind="battery" />} />
+            <Route path="/laboratory" element={<Laboratory />} />
+            <Route
+              path="/settings"
+              element={
+                <div className="page">
+                  <div className="eyebrow">PREFERENCES</div>
+                  <h1>工作台设置</h1>
+                  <p className="page-description">运行环境与服务连接</p>
+                  {health.isPending ? (
+                    <Spin />
+                  ) : health.data ? (
+                    <div className="settings-card">
+                      <h3>研究引擎</h3>
+                      <dl>
+                        <dt>运行解释器</dt>
+                        <dd>
+                          <code>{health.data.runtime}</code>
+                        </dd>
+                        <dt>项目根目录</dt>
+                        <dd>
+                          {health.data.project_roots.map((p) => (
+                            <div key={p}>
+                              <code>{p}</code>
+                            </div>
+                          ))}
+                        </dd>
+                        <dt>并发策略</dt>
+                        <dd>
+                          同时运行 {health.data.concurrency} 个项目；项目内实验按现有队列策略调度。
+                        </dd>
+                        <dt>接口文档</dt>
+                        <dd>
+                          <a href="/api/docs" target="_blank" rel="noopener noreferrer">
+                            查看 OpenAPI 文档 ↗
+                          </a>
+                        </dd>
+                      </dl>
+                      <Alert
+                        type="info"
+                        showIcon
+                        message="模型密钥保存在后端环境配置中。项目计算策略仍由 project-config.json 管理。"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <Result status="404" title="页面不存在" extra={<Link to="/">返回研究项目</Link>} />
+              }
+            />
+            <Route path="/projects" element={<Navigate to="/" replace />} />
+          </Routes>
+        </motion.div>
       </main>
     </div>
   );

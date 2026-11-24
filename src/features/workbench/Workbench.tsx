@@ -17,6 +17,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { active, api, type NodeInfo, type RunInput, type UserQuestion } from '../../api/client';
 import { Status } from '../../components/Status';
 import { Artifact } from './Artifact';
+import { ChargeTrack } from './ChargeTrack';
 import { ArtifactDirectory } from './ArtifactDirectory';
 import { Conversation } from './Conversation';
 import { FigureGallery } from './FigureGallery';
@@ -127,6 +128,15 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     if (dirtyRef.current && path !== file)
       modal.confirm({ title: '放弃未保存的修改？', onOk: open });
     else open();
+  }
+  function pickStage(node: string) {
+    const path = reports[node];
+    if (files.data?.files.some((entry) => entry.path === path)) {
+      openFile(path, node);
+      return;
+    }
+    const label = nodes.find((item) => item.id === node)?.label || node;
+    message.info(`${label}还没有产物，前一阶段完成后才会执行。`);
   }
   if (project.isPending)
     return (
@@ -266,18 +276,22 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             >
               {p.status === 'external_running' ? '终端运行中' : '停止运行'}
             </Button>
-          ) : (
-            <Button
-              size="small"
-              icon={<PlayCircleOutlined />}
-              onClick={() => setRunOpen(true)}
-              disabled={!!checkpoint}
-            >
+          ) : checkpoint ? null : (
+            <Button size="small" icon={<PlayCircleOutlined />} onClick={() => setRunOpen(true)}>
               {p.state.project_goal ? '继续研究' : '启动研究'}
             </Button>
           )}
         </Space>
       </header>
+      <ChargeTrack
+        project={p}
+        nodes={nodes}
+        selected={
+          Object.keys(reports).find((node) => reports[node] === file && node === currentNode) ||
+          Object.keys(reports).find((node) => reports[node] === file)
+        }
+        onPick={pickStage}
+      />
       <nav className="mobile-pane-nav" aria-label="工作台视图">
         <Button
           aria-label="研究对话"
@@ -405,7 +419,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             items={[
               {
                 key: 'report',
-                label: '文件',
+                label: '产物',
                 children: (
                   <>
                     <div className="file-selector">
@@ -413,10 +427,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                         <Dropdown
                           trigger={['click']}
                           menu={{
-                            items: [
-                              { key: 'stages', label: '阶段产物' },
-                              { key: 'figures', label: '图片画廊' },
-                            ],
+                            items: [{ key: 'figures', label: '图片画廊' }],
                             onClick: ({ key }) => setTab(key),
                           }}
                         >
@@ -488,49 +499,8 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                 ),
               },
               {
-                key: 'stages',
-                label: '阶段产物',
-                children: (
-                  <div className="stage-catalog">
-                    <div className="catalog-heading">
-                      <h3>研究过程中的每一份产物</h3>
-                      <span>
-                        {completedNodes.size}/{nodes.length} 阶段有执行记录
-                      </span>
-                    </div>
-                    {nodes.map((node, index) => {
-                      const path = reports[node.id];
-                      const exists = fileList.some((entry) => entry.path === path);
-                      return (
-                        <button
-                          key={node.id}
-                          className={`stage-card ${p.state.current_node === node.id ? 'current' : ''}`}
-                          disabled={!exists}
-                          onClick={() => {
-                            openFile(path, node.id);
-                          }}
-                        >
-                          <span className="stage-index">{String(index + 1).padStart(2, '0')}</span>
-                          <span>
-                            <strong>{node.label}</strong>
-                            <small>
-                              {exists
-                                ? path
-                                : p.state.current_node === node.id && running
-                                  ? '正在生成产物'
-                                  : '尚未生成产物'}
-                            </small>
-                          </span>
-                          <span className="stage-card-state">{exists ? '打开 ↗' : '待生成'}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ),
-              },
-              {
                 key: 'figures',
-                label: '图片画廊',
+                label: '图片',
                 children: <FigureGallery projectId={id} files={fileList} />,
               },
             ]}

@@ -1,0 +1,262 @@
+/* Shared motion and glow effects for the graphite theme. */
+
+/* Soft light that trails the cursor across the page. */
+.cursor-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    520px circle at var(--cursor-x, -1000px) var(--cursor-y, -1000px),
+    rgba(143, 128, 255, 0.07),
+    transparent 60%
+  );
+}
+.shell > .main-shell,
+.shell > .sidebar {
+  position: relative;
+  z-index: 1;
+}
+.shell > .sidebar {
+  position: fixed;
+  z-index: 20;
+}
+
+/* Temporary full-screen canvas for energy bursts. */
+.energy-burst {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.particle-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Cards whose border lights up under the cursor. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    260px circle at var(--mx, -400px) var(--my, -400px),
+    var(--charge-b),
+    var(--charge-a) 35%,
+    transparent 70%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    320px circle at var(--mx, -400px) var(--my, -400px),
+    rgba(143, 128, 255, 0.1),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.spotlight:hover::before,
+.spotlight:hover::after {
+  opacity: 1;
+}
+
+/* Text with a light sweep, for live status. */
+.shiny-text {
+  background: linear-gradient(
+    100deg,
+    var(--ink-2) 0%,
+    var(--ink-2) 40%,
+    #fff 50%,
+    var(--ink-2) 60%,
+    var(--ink-2) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shiny 2.6s linear infinite;
+}
+@keyframes shiny {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+/* Gradient headline type. */
+.gradient-text {
+  background: linear-gradient(90deg, var(--ink) 0%, var(--brand-strong) 55%, var(--charge-b) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Primary buttons charge with the brand gradient and sweep light on hover. */
+.ant-btn-primary:not(:disabled):not(.ant-btn-dangerous) {
+  position: relative;
+  overflow: hidden;
+  border: 0 !important;
+  color: var(--on-brand) !important;
+  background: linear-gradient(110deg, var(--charge-a), #a99cff 45%, var(--charge-b)) !important;
+  background-size: 160% 100% !important;
+  box-shadow: 0 6px 20px -8px var(--glow) !important;
+  transition:
+    background-position 0.5s var(--ease-out),
+    box-shadow 0.3s,
+    transform 0.15s !important;
+}
+.ant-btn-primary:not(:disabled):not(.ant-btn-dangerous):hover {
+  background-position: 100% 0 !important;
+  box-shadow:
+    0 10px 28px -8px var(--glow),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset !important;
+}
+.ant-btn-primary:not(:disabled):not(.ant-btn-dangerous)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -70%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+.ant-btn-primary:not(:disabled):not(.ant-btn-dangerous):hover::after {
+  animation: btn-sheen 0.8s ease;
+}
+.ant-btn:not(:disabled):active {
+  transform: scale(0.96);
+}
+@keyframes btn-sheen {
+  from {
+    left: -70%;
+  }
+  to {
+    left: 130%;
+  }
+}
+
+/* Route change: content rises out of a blur. */
+.route-frame {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.route-frame > * {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Generic entrance used by cards and messages. */
+.fx-pop {
+  animation: fx-pop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes fx-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A pulsing ring for live status dots. */
+.fx-ping {
+  position: relative;
+}
+.fx-ping::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: fx-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes fx-ping {
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-glow,
+  .energy-burst {
+    display: none;
+  }
+  .shiny-text {
+    animation: none;
+    color: var(--ink-2);
+    background: none;
+  }
+}
+
+/* Login: particles behind a glass card. */
+.auth-screen {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 60% at 20% 20%, rgba(143, 128, 255, 0.18), transparent 60%),
+    radial-gradient(50% 60% at 80% 80%, rgba(61, 224, 196, 0.12), transparent 60%), var(--bg) !important;
+}
+.auth-screen .auth-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(22, 25, 32, 0.78);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow-lg) !important;
+  animation: fx-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+/* Lab channels and library entries glow on hover. */
+.bts-channel.spotlight,
+.library-entry.spotlight {
+  transition:
+    transform 0.25s var(--ease-spring),
+    box-shadow 0.3s;
+}
+.bts-channel.spotlight:hover,
+.library-entry.spotlight:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -18px var(--glow);
+}
+.bts-channel.state-running .bts-status-dot {
+  box-shadow: 0 0 10px var(--charge-b);
+  animation: charge-breathe 1.6s ease-in-out infinite;
+}

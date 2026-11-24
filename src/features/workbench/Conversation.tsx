@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, App, Button, Input, Select, Tooltip } from 'antd';
+import { Alert, App, Button, Input, Segmented, Tooltip } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -732,26 +732,28 @@ export function Conversation({
               />
               <div className="composer-tools">
                 <div>
-                  <Select
+                  <Segmented
                     aria-label="对话协作方式"
                     size="small"
                     value={mode}
                     disabled={running || !!checkpoint}
-                    onChange={onModeChange}
+                    onChange={(value) => onModeChange(value as 'auto' | 'expert')}
                     options={[
-                      { value: 'expert', label: '专家模式' },
-                      { value: 'auto', label: '自动模式' },
+                      { value: 'expert', label: '每阶段由我审阅' },
+                      { value: 'auto', label: '全自动' },
                     ]}
                   />
-                  <Tooltip title="起始节点、模型和运行参数">
+                  <Tooltip title="起始阶段、运行到哪一步、模型和运行参数">
                     <Button
                       type="text"
                       size="small"
                       icon={<SettingOutlined />}
-                      aria-label="协作方式设置"
                       disabled={running || !!checkpoint}
                       onClick={onSettings}
-                    />
+                      aria-label="运行设置"
+                    >
+                      <span className="composer-settings-label">运行设置</span>
+                    </Button>
                   </Tooltip>
                 </div>
                 {running && (
@@ -768,6 +770,7 @@ export function Conversation({
                 {
                   <Button
                     type="primary"
+                    data-burst
                     shape={checkpoint ? 'default' : 'circle'}
                     aria-label={
                       checkpoint

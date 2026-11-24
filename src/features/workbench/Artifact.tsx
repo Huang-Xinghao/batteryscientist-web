@@ -53,7 +53,8 @@ function FileArtifact({
   const images = siblingImages(path, files);
   const [imagePreview, setImagePreview] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
-  const [mode, setMode] = useState<string>(initialMode || (inlineEdit ? '编辑' : '预览'));
+  // Reports open for reading first; LaTeX sources open straight into the editor.
+  const [mode, setMode] = useState<string>(initialMode || (isTex ? '编辑' : '预览'));
   const [baseContent, setBaseContent] = useState('');
   const [saveError, setSaveError] = useState('');
   const [draft, setDraft] = useState('');
@@ -82,14 +83,14 @@ function FileArtifact({
   const stalePdf = savedSource || (pdf && source && source.modified > pdf.modified);
 
   useEffect(() => {
-    setMode(initialMode || (inlineEdit ? '编辑' : '预览'));
+    setMode(initialMode || (isTex ? '编辑' : '预览'));
     setPdfPath('');
     setSavedSource(false);
     setDraft('');
     setBaseHash('');
     setBaseContent('');
     setSaveError('');
-  }, [path, projectId, inlineEdit, initialMode]);
+  }, [path, projectId, isTex, initialMode]);
   useEffect(() => {
     if (!inlineEdit || !file.data?.editable || dirty) return;
     setDraft(file.data.content || '');
@@ -179,13 +180,14 @@ function FileArtifact({
               {expanded ? '退出全屏' : '全屏查看'}
             </Button>
           )}
-          {file.data?.editable && !inlineEdit && (
+          {file.data?.editable && (!inlineEdit || isMarkdown) && (
             <Segmented
               size="small"
+              aria-label="显示方式"
               value={mode}
               onChange={(v) => changeMode(v)}
               options={[
-                { label: '预览', value: '预览' },
+                { label: isMarkdown ? '阅读' : '预览', value: '预览' },
                 {
                   label: (
                     <span>
@@ -409,7 +411,7 @@ function FileArtifact({
             <Empty description="此文件可下载后查看" />
           )
         ) : path.endsWith('.md') ? (
-          <article className="markdown">
+          <article className="markdown markdown-reading">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeKatex]}

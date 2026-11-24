@@ -15,7 +15,7 @@
   gap: 16px;
   margin: 0 0 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e7e7e7;
+  border-bottom: 1px solid var(--line);
 }
 .library-page .library-heading > div:first-child {
   display: flex;
@@ -39,7 +39,7 @@
   display: block;
   margin: 0;
   font-size: 11px;
-  color: #919191;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -53,7 +53,7 @@
   display: inline;
   padding: 3px 8px;
   border-radius: 6px;
-  background: #f0f0f0;
+  background: var(--surface-2);
 }
 .library-page .library-layout {
   flex: 1;

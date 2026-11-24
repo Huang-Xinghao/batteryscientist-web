@@ -23,54 +23,55 @@ monaco.languages.setMonarchTokensProvider('latex', {
     ],
   },
 });
+const graphiteColors = {
+  'editor.background': '#161920',
+  'editor.foreground': '#D7DBE3',
+  'editorLineNumber.foreground': '#5B6372',
+  'editorLineNumber.activeForeground': '#B9AFFF',
+  'editor.lineHighlightBackground': '#1C2029',
+  'editor.lineHighlightBorder': '#00000000',
+  'editor.selectionBackground': '#3A3370',
+  'editor.inactiveSelectionBackground': '#2A2650',
+  'editorCursor.foreground': '#3DE0C4',
+  'editorIndentGuide.background1': '#2A303B',
+  'editorBracketMatch.background': '#2A2650',
+  'editorBracketMatch.border': '#8F80FF',
+  'editorGutter.background': '#161920',
+  'editorWidget.background': '#1C2029',
+  'scrollbarSlider.background': '#3A415066',
+};
+// Graphite night theme for LaTeX sources.
 monaco.editor.defineTheme('paper-latex', {
-  base: 'vs',
+  base: 'vs-dark',
   inherit: true,
   rules: [
-    { token: 'comment', foreground: '8B8B96', fontStyle: 'italic' },
-    { token: 'keyword', foreground: '3F568A' },
-    { token: 'keyword.control', foreground: '9A4FAD' },
-    { token: 'keyword.structure', foreground: '2869AF', fontStyle: 'bold' },
-    { token: 'delimiter.bracket', foreground: 'A27335' },
-    { token: 'operator', foreground: 'C56A46' },
+    { token: 'comment', foreground: '6B7383', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'B9AFFF' },
+    { token: 'keyword.control', foreground: 'F59AE8' },
+    { token: 'keyword.structure', foreground: '7CC8FF', fontStyle: 'bold' },
+    { token: 'delimiter.bracket', foreground: 'FFD08A' },
+    { token: 'operator', foreground: '3DE0C4' },
   ],
-  colors: {
-    'editor.background': '#FFFFFF',
-    'editor.foreground': '#303036',
-    'editorLineNumber.foreground': '#B4B4BC',
-    'editorLineNumber.activeForeground': '#27272A',
-    'editor.lineHighlightBackground': '#F4F4F5',
-    'editor.selectionBackground': '#DEDEE5',
-    'editor.inactiveSelectionBackground': '#E8E8ED',
-    'editorCursor.foreground': '#27272A',
-    'editorIndentGuide.background1': '#E8E8ED',
-    'editorBracketMatch.background': '#E4E4E7',
-    'editorBracketMatch.border': '#A1A1AA',
-    'editorGutter.background': '#FAFAFA',
-  },
+  colors: graphiteColors,
 });
-// VS Code Light+ colors, scoped to Markdown source files.
+// Graphite night theme for Markdown sources.
 monaco.editor.defineTheme('paper-markdown', {
-  base: 'vs',
+  base: 'vs-dark',
   inherit: true,
   rules: [
-    { token: 'keyword', foreground: '000080', fontStyle: 'bold' },
-    { token: 'string.link', foreground: '0451A5' },
-    { token: 'string', foreground: 'A31515' },
-    { token: 'variable', foreground: '001080' },
-    { token: 'comment', foreground: '008000' },
+    { token: 'keyword', foreground: 'B9AFFF', fontStyle: 'bold' },
+    { token: 'string.link', foreground: '7CC8FF' },
+    { token: 'string', foreground: 'FFD08A' },
+    { token: 'variable', foreground: '3DE0C4' },
+    { token: 'comment', foreground: '6B7383' },
   ],
-  colors: {
-    'editor.background': '#FFFFFF',
-    'editor.foreground': '#3B3B3B',
-    'editorLineNumber.foreground': '#858585',
-    'editorLineNumber.activeForeground': '#171717',
-    'editor.lineHighlightBackground': '#F5F5F5',
-    'editor.selectionBackground': '#ADD6FF',
-    'editor.inactiveSelectionBackground': '#E5EBF1',
-    'editorCursor.foreground': '#007ACC',
-    'editorGutter.background': '#FFFFFF',
-  },
+  colors: graphiteColors,
+});
+monaco.editor.defineTheme('paper-code', {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [],
+  colors: graphiteColors,
 });
 // Bundle the editor locally so research file contents never depend on a CDN.
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -134,7 +135,11 @@ export default function FileEditor({ value, path, onChange, onSave, dirty, savin
             editor.onDidChangeCursorPosition((event) => setPosition(event.position));
           }}
           theme={
-            language === 'latex' ? 'paper-latex' : language === 'markdown' ? 'paper-markdown' : 'vs'
+            language === 'latex'
+              ? 'paper-latex'
+              : language === 'markdown'
+                ? 'paper-markdown'
+                : 'paper-code'
           }
           height="100%"
           language={language}
