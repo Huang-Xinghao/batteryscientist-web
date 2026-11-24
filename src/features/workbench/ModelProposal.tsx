@@ -6,16 +6,10 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { useBlocker } from 'react-router-dom';
-import { active, api, request } from '../../api/client';
+import { active, api, request, type ProposalOverview } from '../../api/client';
 import './model-proposal.css';
 
-type Overview = {
-  sha256: string;
-  diagram: string;
-  input: string;
-  architecture: string;
-  output: string;
-};
+type Overview = ProposalOverview;
 
 export default function ModelProposal({
   projectId,

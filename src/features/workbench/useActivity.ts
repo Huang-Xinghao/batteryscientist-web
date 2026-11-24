@@ -3,6 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, type ActivityEvent } from '../../api/client';
 import { eventMatches, type AgentRole } from './agents';
 
+/** Activity is re-read this often while the live stream is down. */
+const POLL_MS = 5000;
+/** While the stream is live a slow re-read still covers silently dropped messages. */
+const LIVE_POLL_MS = 30000;
+
 export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', enabled = true) {
   const client = useQueryClient();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
@@ -19,6 +24,8 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
     let cursor = 0;
     let polling = false;
     let initialized = false;
+    let live = false;
+    let lastPoll = 0;
     setEvents([]);
     setHasOlder(false);
     setLoadingOlder(false);
@@ -28,7 +35,8 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
     function refresh() {
       if (refreshTimer) return;
       refreshTimer = setTimeout(() => {
-        for (const key of ['project', 'files', 'log'])
+        // Events are the signal that project state or files changed.
+        for (const key of ['project', 'files', 'log', 'file'])
           client.invalidateQueries({ queryKey: [key, projectId] });
         refreshTimer = undefined;
       }, 500);
@@ -51,6 +59,7 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
     async function poll() {
       if (polling || disposed) return;
       polling = true;
+      lastPoll = Date.now();
       try {
         let more = true;
         while (more && !disposed) {
@@ -77,8 +86,14 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
       await poll();
       if (disposed) return;
       stream = new EventSource(`/api/projects/${projectId}/events?after=${cursor}`);
-      stream.onopen = () => setConnection('connected');
-      stream.onerror = () => setConnection('reconnecting');
+      stream.onopen = () => {
+        live = true;
+        setConnection('connected');
+      };
+      stream.onerror = () => {
+        live = false;
+        setConnection('reconnecting');
+      };
       stream.onmessage = (message) => {
         try {
           const event = JSON.parse(message.data) as ActivityEvent;
@@ -90,7 +105,9 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
       };
     }
     void connect();
-    const interval = setInterval(() => void poll(), 5000);
+    const interval = setInterval(() => {
+      if (!live || Date.now() - lastPoll >= LIVE_POLL_MS) void poll();
+    }, POLL_MS);
     return () => {
       disposed = true;
       stream?.close();

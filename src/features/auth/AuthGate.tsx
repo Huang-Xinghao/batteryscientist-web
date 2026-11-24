@@ -1,10 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Card, Form, Input, Spin } from 'antd';
-import { request } from '../../api/client';
+import { request, type Session } from '../../api/client';
 import { ParticleField } from '../../components/fx/ParticleField';
 
-type Session = { enabled: boolean; authenticated: boolean };
 export function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const session = useQuery({

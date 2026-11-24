@@ -37,6 +37,7 @@ function FileArtifact({
   onDirtyChange,
   files,
   initialMode,
+  live = false,
 }: {
   projectId: string;
   path: string;
@@ -44,6 +45,8 @@ function FileArtifact({
   files: ProjectFile[];
   onDirtyChange: (dirty: boolean) => void;
   initialMode?: '预览' | '编辑';
+  /** The event stream is connected and refreshes this file when it changes. */
+  live?: boolean;
 }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
@@ -64,7 +67,8 @@ function FileArtifact({
     queryKey: ['file', projectId, path],
     queryFn: () => api.file(projectId, path),
     enabled: !!path,
-    refetchInterval: running && (mode === '预览' || (inlineEdit && !dirty)) ? 6000 : false,
+    refetchInterval:
+      running && (mode === '预览' || (inlineEdit && !dirty)) ? (live ? 30000 : 6000) : false,
     refetchOnWindowFocus: mode === '预览' || (inlineEdit && !dirty),
   });
   const [expanded, setExpanded] = useState(false);

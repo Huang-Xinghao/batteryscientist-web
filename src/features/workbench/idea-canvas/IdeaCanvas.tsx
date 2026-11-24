@@ -42,7 +42,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { active, api, request } from '../../../api/client';
+import { active, api, request, type RunAccepted } from '../../../api/client';
 import {
   affected,
   hasRevisionChanges,
@@ -605,7 +605,7 @@ function CanvasEditor({
     try {
       const persisted = dirty || !hash ? await save() : serverStatus;
       if (!persisted) return;
-      const operation = await request<{ id: string }>(`/projects/${projectId}/runs`, {
+      const operation = await request<RunAccepted>(`/projects/${projectId}/runs`, {
         method: 'POST',
         body: JSON.stringify({
           action: 'proposal_revise',
@@ -630,7 +630,7 @@ function CanvasEditor({
         setSubmitting(true);
         try {
           const project = await api.project(projectId);
-          const operation = await request<{ id: string }>(`/projects/${projectId}/runs`, {
+          const operation = await request<RunAccepted>(`/projects/${projectId}/runs`, {
             method: 'POST',
             body: JSON.stringify({
               action: 'proposal_approve',

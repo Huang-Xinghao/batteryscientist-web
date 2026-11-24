@@ -517,6 +517,30 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityEventView */
+        ActivityEventView: {
+            /** Id */
+            id: number;
+            /** Project Id */
+            project_id: string;
+            /** Run Id */
+            run_id?: string | null;
+            /** Kind */
+            kind: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
+        };
+        /** ActivityPageView */
+        ActivityPageView: {
+            /** Events */
+            events: components["schemas"]["ActivityEventView"][];
+            /** Has More */
+            has_more: boolean;
+        };
         /** AgentView */
         AgentView: {
             /** Role */
@@ -544,6 +568,20 @@ export interface components {
              * @default false
              */
             is_active?: boolean;
+        };
+        /** AnswerAccepted */
+        AnswerAccepted: {
+            /** Status */
+            status: string;
+            /** Question Id */
+            question_id: string;
+            /** Task Id */
+            task_id: string;
+        };
+        /** AuthResult */
+        AuthResult: {
+            /** Authenticated */
+            authenticated: boolean;
         };
         /** CanvasApply */
         CanvasApply: {
@@ -583,11 +621,49 @@ export interface components {
             position: components["schemas"]["Position"];
             data: components["schemas"]["ModuleData"];
         };
+        /** CanvasOperationView */
+        CanvasOperationView: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Error */
+            error?: string | null;
+            /** Createdat */
+            createdAt: string;
+            /** Finishedat */
+            finishedAt?: string | null;
+            /** Action */
+            action: string;
+            progress?: components["schemas"]["RevisionProgressView"] | null;
+        };
         /** CanvasSave */
         CanvasSave: {
             /** Sha256 */
             sha256: string;
             draft: components["schemas"]["CanvasDraft"];
+        };
+        /** CanvasView */
+        CanvasView: {
+            operation?: components["schemas"]["CanvasOperationView"] | null;
+            /** Sha256 */
+            sha256: string;
+            /** Sourcehash */
+            sourceHash: string;
+            draft?: components["schemas"]["CanvasDraft"] | null;
+            revision?: components["schemas"]["RevisionView"] | null;
+            /** Canapprove */
+            canApprove: boolean;
+            /**
+             * Canapply
+             * @default false
+             */
+            canApply?: boolean;
+            /**
+             * Context
+             * @enum {string}
+             */
+            context: "checkpoint" | "auto" | "historical" | "unavailable";
         };
         /** Capabilities */
         Capabilities: {
@@ -718,12 +794,65 @@ export interface components {
             /** Channels */
             channels: components["schemas"]["ChannelView"][];
         };
+        /** FileContentView */
+        FileContentView: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "binary";
+            /** Path */
+            path: string;
+            /** Size */
+            size?: number | null;
+            /** Content */
+            content?: string | null;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Editable */
+            editable?: boolean | null;
+        };
         /** FileEdit */
         FileEdit: {
             /** Content */
             content: string;
             /** Sha256 */
             sha256: string;
+        };
+        /** FileListView */
+        FileListView: {
+            /** Files */
+            files: components["schemas"]["ProjectFileView"][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** GraphEdgeView */
+        GraphEdgeView: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Type */
+            type: string;
+            /** Evidence */
+            evidence: string;
+        };
+        /** GraphNodeView */
+        GraphNodeView: {
+            /** Path */
+            path: string;
+            /** Title */
+            title: string;
+            /** Category */
+            category: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Modified */
+            modified: number;
+            /** Id */
+            id: string;
+            /** Tags */
+            tags: string[];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -750,12 +879,122 @@ export interface components {
             /** Timestamp */
             timestamp?: string | null;
         };
+        /** LibraryCategoryView */
+        LibraryCategoryView: {
+            /** Id */
+            id: string;
+            /** Count */
+            count: number;
+        };
+        /** LibraryDocumentView */
+        LibraryDocumentView: {
+            /** Path */
+            path: string;
+            /** Title */
+            title: string;
+            /** Category */
+            category: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Modified */
+            modified: number;
+            /** Content */
+            content: string;
+        };
+        /** LibraryEntryView */
+        LibraryEntryView: {
+            /** Path */
+            path: string;
+            /** Title */
+            title: string;
+            /** Category */
+            category: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Modified */
+            modified: number;
+        };
+        /** LibraryFigureView */
+        LibraryFigureView: {
+            /** Id */
+            id: string;
+            /** Image Path */
+            image_path: string;
+            /** Paper Id */
+            paper_id: string;
+            /** Paper Title */
+            paper_title: string;
+            /** Paper Path */
+            paper_path?: string | null;
+            /** Label */
+            label: string;
+            /** Page */
+            page?: number | null;
+            /** Caption */
+            caption: string;
+        };
+        /** LibraryFiguresView */
+        LibraryFiguresView: {
+            /** Available */
+            available: boolean;
+            /** Items */
+            items: components["schemas"]["LibraryFigureView"][];
+            /** Total */
+            total: number;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** LibraryIndexView */
+        LibraryIndexView: {
+            /** Available */
+            available: boolean;
+            /** Items */
+            items: components["schemas"]["LibraryEntryView"][];
+            /** Categories */
+            categories: components["schemas"]["LibraryCategoryView"][];
+            /** Total */
+            total: number;
+            /** Matched */
+            matched: number;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** LogView */
+        LogView: {
+            /** Content */
+            content: string;
+        };
         /** Login */
         Login: {
             /** Username */
             username: string;
             /** Password */
             password: string;
+        };
+        /**
+         * MessageBusy
+         * @description A message sent while a run is active is not executed.
+         */
+        MessageBusy: {
+            /**
+             * Intent
+             * @constant
+             */
+            intent: "status";
+            /** Reply */
+            reply: string;
+            /** Accepted */
+            accepted: boolean;
+            /** Run Id */
+            run_id: string;
+            /** Status */
+            status: string;
+            /** Progress */
+            progress: {
+                [key: string]: unknown;
+            };
+            /** Pending Questions */
+            pending_questions?: components["schemas"]["QuestionView"][];
         };
         /** MessageCreate */
         MessageCreate: {
@@ -830,6 +1069,17 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** ParadigmGraphView */
+        ParadigmGraphView: {
+            /** Available */
+            available: boolean;
+            /** Nodes */
+            nodes: components["schemas"]["GraphNodeView"][];
+            /** Edges */
+            edges: components["schemas"]["GraphEdgeView"][];
+            /** Truncated */
+            truncated: boolean;
+        };
         /** Position */
         Position: {
             /** X */
@@ -843,6 +1093,15 @@ export interface components {
             name: string;
             /** Path */
             path?: string | null;
+        };
+        /** ProjectFileView */
+        ProjectFileView: {
+            /** Path */
+            path: string;
+            /** Size */
+            size: number;
+            /** Modified */
+            modified: number;
         };
         /** ProjectView */
         ProjectView: {
@@ -869,6 +1128,19 @@ export interface components {
             pending_questions?: components["schemas"]["QuestionView"][];
             /** Agents */
             agents?: components["schemas"]["AgentView"][];
+        };
+        /** ProposalOverviewView */
+        ProposalOverviewView: {
+            /** Sha256 */
+            sha256: string;
+            /** Diagram */
+            diagram: string;
+            /** Input */
+            input: string;
+            /** Architecture */
+            architecture: string;
+            /** Output */
+            output: string;
         };
         /** ProposalReview */
         ProposalReview: {
@@ -908,6 +1180,29 @@ export interface components {
             /** Created At */
             created_at: string;
         };
+        /** ReviewImpactView */
+        ReviewImpactView: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct" | "related";
+            /** Title */
+            title: string;
+            /** Detail */
+            detail: string;
+            /** Sectionids */
+            sectionIds: string[];
+        };
+        /** ReviewQuestionView */
+        ReviewQuestionView: {
+            /** Id */
+            id: string;
+            /** Question */
+            question: string;
+            /** Sectionids */
+            sectionIds: string[];
+        };
         /** ReviewSection */
         ReviewSection: {
             /** Id */
@@ -928,6 +1223,63 @@ export interface components {
              * @default false
              */
             edited?: boolean;
+        };
+        /** RevisionDiffView */
+        RevisionDiffView: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Beforesummary */
+            beforeSummary: string;
+            /** Aftersummary */
+            afterSummary: string;
+            /** Detailchanged */
+            detailChanged: boolean;
+        };
+        /** RevisionProgressView */
+        RevisionProgressView: {
+            /** Stage */
+            stage?: string | null;
+            /**
+             * Receivedchars
+             * @default 0
+             */
+            receivedChars?: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** RevisionView */
+        RevisionView: {
+            /** Id */
+            id: string;
+            /** Summary */
+            summary: string;
+            /** Impacts */
+            impacts: components["schemas"]["ReviewImpactView"][];
+            /** Questions */
+            questions: components["schemas"]["ReviewQuestionView"][];
+            /** Diff */
+            diff: components["schemas"]["RevisionDiffView"][];
+            /** Createdat */
+            createdAt: string;
+            /** Approvedat */
+            approvedAt?: string | null;
+            /** Formalhash */
+            formalHash?: string | null;
+            /** Frozenpath */
+            frozenPath?: string | null;
+            /** Synced */
+            synced: boolean;
+            /** Approved */
+            approved: boolean;
+        };
+        /** RunAccepted */
+        RunAccepted: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
         };
         /** RunCreate */
         RunCreate: {
@@ -997,6 +1349,13 @@ export interface components {
             options: {
                 [key: string]: unknown;
             };
+        };
+        /** SessionView */
+        SessionView: {
+            /** Enabled */
+            enabled: boolean;
+            /** Authenticated */
+            authenticated: boolean;
         };
         /** SnapshotView */
         SnapshotView: {
@@ -1085,6 +1444,11 @@ export interface components {
              */
             full_stage?: boolean;
         };
+        /** StopAccepted */
+        StopAccepted: {
+            /** Status */
+            status: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1143,7 +1507,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SessionView"];
                 };
             };
         };
@@ -1167,7 +1531,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuthResult"];
                 };
             };
             /** @description Validation Error */
@@ -1196,7 +1560,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuthResult"];
                 };
             };
         };
@@ -1222,7 +1586,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LibraryIndexView"];
                 };
             };
             /** @description Validation Error */
@@ -1255,7 +1619,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LibraryDocumentView"];
                 };
             };
             /** @description Validation Error */
@@ -1317,7 +1681,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ParadigmGraphView"];
                 };
             };
         };
@@ -1337,7 +1701,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LibraryFiguresView"];
                 };
             };
         };
@@ -1359,7 +1723,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProposalOverviewView"];
                 };
             };
             /** @description Validation Error */
@@ -1394,7 +1758,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CanvasView"];
                 };
             };
             /** @description Validation Error */
@@ -1425,7 +1789,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CanvasView"];
                 };
             };
             /** @description Validation Error */
@@ -1460,7 +1824,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CanvasView"];
                 };
             };
             /** @description Validation Error */
@@ -1690,7 +2054,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RunAccepted"];
                 };
             };
             /** @description Validation Error */
@@ -1725,7 +2089,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MessageBusy"];
+                };
+            };
+            /** @description Message accepted as a coordinator run */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunAccepted"];
                 };
             };
             /** @description Validation Error */
@@ -1792,7 +2165,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AnswerAccepted"];
                 };
             };
             /** @description Validation Error */
@@ -1823,7 +2196,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["StopAccepted"];
                 };
             };
             /** @description Validation Error */
@@ -1854,7 +2227,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FileListView"];
                 };
             };
             /** @description Validation Error */
@@ -1887,7 +2260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FileContentView"];
                 };
             };
             /** @description Validation Error */
@@ -1924,7 +2297,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FileContentView"];
                 };
             };
             /** @description Validation Error */
@@ -1988,7 +2361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LogView"];
                 };
             };
             /** @description Validation Error */
@@ -2024,7 +2397,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ActivityPageView"];
                 };
             };
             /** @description Validation Error */

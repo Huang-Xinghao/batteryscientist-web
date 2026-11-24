@@ -1,6 +1,9 @@
 import type { Edge, Node } from '@xyflow/react';
+import type { components } from '../../../api/schema';
 import { seedSourceHash, timeSetDetails } from './timeSetSeed';
 import { exportReview, type ProposalReview } from './reviewModel';
+
+type Schemas = components['schemas'];
 
 export const proposalPath = 'refine-logs/FINAL_PROPOSAL.md';
 export const fields = {
@@ -29,41 +32,10 @@ export type CanvasDraft = {
   changes: string[];
   review?: ProposalReview;
 };
-export type RevisionInfo = {
-  id: string;
-  summary: string;
-  impacts: { kind: 'direct' | 'related'; title: string; detail: string; sectionIds: string[] }[];
-  questions: { id: string; question: string; sectionIds: string[] }[];
-  diff: {
-    id: string;
-    title: string;
-    beforeSummary: string;
-    afterSummary: string;
-    detailChanged: boolean;
-  }[];
-  synced: boolean;
-  approved: boolean;
-  formalHash?: string;
-  frozenPath?: string;
-};
-export type CanvasResponse = {
-  sha256: string;
-  sourceHash: string;
-  draft: CanvasDraft | null;
-  revision?: RevisionInfo | null;
-  operation?: {
-    id: string;
-    action: string;
-    status: string;
-    error?: string | null;
-    createdAt?: string;
-    finishedAt?: string | null;
-    progress?: { stage: string; receivedChars: number; updatedAt: string };
-  } | null;
-  canApprove?: boolean;
-  canApply?: boolean;
-  context?: 'checkpoint' | 'auto' | 'historical' | 'unavailable';
-};
+export type RevisionInfo = Schemas['RevisionView'];
+// The draft keeps React Flow's own node and edge types, which the editor needs;
+// every other field comes from the backend's CanvasView model.
+export type CanvasResponse = Omit<Schemas['CanvasView'], 'draft'> & { draft: CanvasDraft | null };
 
 export function hasRevisionChanges(draft: CanvasDraft) {
   if (draft.review?.feedback.trim() || draft.review?.sections.some((section) => section.edited))

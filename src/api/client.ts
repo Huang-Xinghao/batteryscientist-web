@@ -6,67 +6,28 @@ export type WorkflowState = Schemas['WorkflowView'];
 export type Run = Schemas['RunView'];
 export type Project = Schemas['ProjectView'];
 export type UserQuestion = Schemas['QuestionView'];
-export type ProjectFile = { path: string; size: number; modified: number };
-export type FileContent = {
-  kind: 'text' | 'binary';
-  path: string;
-  content?: string;
-  sha256?: string;
-  editable?: boolean;
-};
-export type RunInput = import('./schema').components['schemas']['RunCreate'];
+export type ProjectFile = Schemas['ProjectFileView'];
+export type FileList = Schemas['FileListView'];
+export type FileContent = Schemas['FileContentView'];
+export type RunInput = Schemas['RunCreate'];
+export type RunAccepted = Schemas['RunAccepted'];
+export type MessageBusy = Schemas['MessageBusy'];
 export type Health = Schemas['HealthView'];
 export type LaboratorySnapshot = Schemas['SnapshotView'];
 export type LaboratoryChannel = Schemas['ChannelView'];
 export type LaboratoryDevice = Schemas['DeviceView'];
 export type LaboratorySource = Schemas['SourceView'];
-export type ActivityEvent = {
-  id: number;
-  project_id: string;
-  run_id: string | null;
-  kind: string;
-  data: Record<string, unknown>;
-  created_at: string;
-};
-export type ActivityPage = { events: ActivityEvent[]; has_more: boolean };
+export type ActivityEvent = Schemas['ActivityEventView'];
+export type ActivityPage = Schemas['ActivityPageView'];
 export type LibraryKind = 'paradigms' | 'battery';
-export type LibraryEntry = {
-  path: string;
-  title: string;
-  category: string;
-  excerpt: string;
-  modified: number;
-};
-export type LibraryIndex = {
-  available: boolean;
-  items: LibraryEntry[];
-  categories: { id: string; count: number }[];
-  total: number;
-  matched: number;
-  truncated: boolean;
-};
-export type ParadigmGraph = {
-  available: boolean;
-  truncated: boolean;
-  nodes: (LibraryEntry & { id: string; tags: string[] })[];
-  edges: { source: string; target: string; type: string; evidence: string }[];
-};
-export type LibraryFigure = {
-  id: string;
-  image_path: string;
-  paper_id: string;
-  paper_title: string;
-  paper_path: string | null;
-  label: string;
-  page: number | null;
-  caption: string;
-};
-export type LibraryFigures = {
-  available: boolean;
-  items: LibraryFigure[];
-  total: number;
-  truncated: boolean;
-};
+export type LibraryEntry = Schemas['LibraryEntryView'];
+export type LibraryIndex = Schemas['LibraryIndexView'];
+export type LibraryDocument = Schemas['LibraryDocumentView'];
+export type ParadigmGraph = Schemas['ParadigmGraphView'];
+export type LibraryFigure = Schemas['LibraryFigureView'];
+export type LibraryFigures = Schemas['LibraryFiguresView'];
+export type Session = Schemas['SessionView'];
+export type ProposalOverview = Schemas['ProposalOverviewView'];
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -107,9 +68,7 @@ export const api = {
   library: (kind: LibraryKind, q = '', category = '') =>
     request<LibraryIndex>(`/libraries/${kind}?${new URLSearchParams({ q, category })}`),
   libraryDocument: (kind: LibraryKind, path: string) =>
-    request<LibraryEntry & { content: string }>(
-      `/libraries/${kind}/document?${new URLSearchParams({ path })}`,
-    ),
+    request<LibraryDocument>(`/libraries/${kind}/document?${new URLSearchParams({ path })}`),
   libraryAsset: (kind: LibraryKind, path: string) =>
     `/api/libraries/${kind}/asset?${new URLSearchParams({ path })}`,
   health: () => request<Health>('/health'),
@@ -118,27 +77,20 @@ export const api = {
   create: (body: { name: string; path?: string }) =>
     request<Project>('/projects', { method: 'POST', body: JSON.stringify(body) }),
   run: (id: string, body: RunInput) =>
-    request<{ id: string } | { intent: 'chat' | 'clarify'; reply: string }>(
-      `/projects/${id}/runs`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
+    request<RunAccepted>(`/projects/${id}/runs`, { method: 'POST', body: JSON.stringify(body) }),
   message: (id: string, body: { prompt: string; mode: 'auto' | 'expert' }) =>
-    request<
-      | { id: string }
-      | { intent: 'chat'; reply: string }
-      | { intent: 'status'; reply: string; accepted: false }
-    >(`/projects/${id}/messages`, {
+    request<RunAccepted | MessageBusy>(`/projects/${id}/messages`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   answerQuestion: (id: string, question: UserQuestion, answer: string) =>
-    request<{ status: string }>(`/projects/${id}/questions/${question.id}/answer`, {
+    request<Schemas['AnswerAccepted']>(`/projects/${id}/questions/${question.id}/answer`, {
       method: 'POST',
       body: JSON.stringify({ task_id: question.task_id, answer }),
     }),
-  stop: (id: string) => request(`/projects/${id}/stop`, { method: 'POST' }),
-  files: (id: string) =>
-    request<{ files: ProjectFile[]; truncated: boolean }>(`/projects/${id}/files`),
+  stop: (id: string) =>
+    request<Schemas['StopAccepted']>(`/projects/${id}/stop`, { method: 'POST' }),
+  files: (id: string) => request<FileList>(`/projects/${id}/files`),
   file: (id: string, path: string) =>
     request<FileContent>(`/projects/${id}/file?${new URLSearchParams({ path })}`),
   save: (id: string, path: string, content: string, sha256: string) =>
@@ -146,7 +98,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ content, sha256 }),
     }),
-  log: (id: string) => request<{ content: string }>(`/projects/${id}/log`),
+  log: (id: string) => request<Schemas['LogView']>(`/projects/${id}/log`),
   activity: (id: string, cursor: { before?: number; after?: number; role?: string } = {}) =>
     request<ActivityPage>(
       `/projects/${id}/activity?${new URLSearchParams(

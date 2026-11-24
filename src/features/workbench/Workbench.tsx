@@ -36,15 +36,19 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const ideaCanvasOpen = ['idea-canvas', 'idea-review'].includes(searchParams.get('view') || '');
   const { message, modal } = App.useApp();
   const client = useQueryClient();
+  const activity = useActivity(id);
+  // Live events refresh these queries as things change; polling is only a
+  // fallback, fast while the event stream is down and a slow heartbeat otherwise.
+  const live = activity.connection === 'connected';
   const project = useQuery({
     queryKey: ['project', id],
     queryFn: () => api.project(id),
-    refetchInterval: 4000,
+    refetchInterval: live ? 30000 : 4000,
   });
   const files = useQuery({
     queryKey: ['files', id],
     queryFn: () => api.files(id),
-    refetchInterval: 10000,
+    refetchInterval: live ? 60000 : 10000,
   });
   const [activityOpen, setActivityOpen] = useState(false);
   const logs = useQuery({
@@ -53,7 +57,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     enabled: activityOpen,
     refetchInterval: activityOpen ? 3000 : false,
   });
-  const activity = useActivity(id);
   const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
   const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
   const [runOpen, setRunOpen] = useState(false);
@@ -485,6 +488,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                       projectId={id}
                       path={file}
                       running={running}
+                      live={live}
                       workflowStage={
                         nodes.find(
                           (node) => node.id === (p.progress.current_node || p.state.current_node),
