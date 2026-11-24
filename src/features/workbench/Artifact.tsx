@@ -68,7 +68,7 @@ function FileArtifact({
     queryFn: () => api.file(projectId, path),
     enabled: !!path,
     refetchInterval:
-      running && (mode === '预览' || (inlineEdit && !dirty)) ? (live ? 30000 : 6000) : false,
+      running && (mode === '预览' || (inlineEdit && !dirty)) ? (live ? 15000 : 6000) : false,
     refetchOnWindowFocus: mode === '预览' || (inlineEdit && !dirty),
   });
   const [expanded, setExpanded] = useState(false);

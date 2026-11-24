@@ -43,7 +43,10 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const project = useQuery({
     queryKey: ['project', id],
     queryFn: () => api.project(id),
-    refetchInterval: live ? 30000 : 4000,
+    // Runs started from a terminal change state without events, so keep a
+    // moderate check while a run is active.
+    refetchInterval: (query) =>
+      !live ? 4000 : active(query.state.data?.status || '') ? 8000 : 30000,
   });
   const files = useQuery({
     queryKey: ['files', id],
@@ -78,6 +81,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     mutationFn: (values: RunInput) => api.run(id, values),
     onSuccess: (result) => {
       setRunOpen(false);
+      activity.refresh();
       client.invalidateQueries({ queryKey: ['project', id] });
       client.invalidateQueries({ queryKey: ['projects'] });
       if ('id' in result) message.success('运行请求已提交');
@@ -90,6 +94,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const sendMessage = useMutation({
     mutationFn: (body: { prompt: string; mode: 'auto' | 'expert' }) => api.message(id, body),
     onSuccess: (result) => {
+      activity.refresh();
       client.invalidateQueries({ queryKey: ['project', id] });
       client.invalidateQueries({ queryKey: ['projects'] });
       if ('id' in result) message.success('任务已提交');

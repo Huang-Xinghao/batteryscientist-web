@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, type ActivityEvent } from '../../api/client';
 import { eventMatches, type AgentRole } from './agents';
@@ -16,6 +16,7 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const generation = useRef(0);
+  const pollNow = useRef<() => void>(() => {});
   useEffect(() => {
     const current = ++generation.current;
     let disposed = false;
@@ -104,6 +105,7 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
         }
       };
     }
+    pollNow.current = () => void poll();
     void connect();
     const interval = setInterval(() => {
       if (!live || Date.now() - lastPoll >= LIVE_POLL_MS) void poll();
@@ -139,5 +141,7 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
       if (generation.current === current) setLoadingOlder(false);
     }
   }
-  return { events, connection, error, hasOlder, loadingOlder, loadOlder };
+  /** Re-read new events now, e.g. right after the user sent something. */
+  const refresh = useCallback(() => pollNow.current(), []);
+  return { events, connection, error, hasOlder, loadingOlder, loadOlder, refresh };
 }
