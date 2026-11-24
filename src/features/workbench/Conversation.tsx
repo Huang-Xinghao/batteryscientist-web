@@ -22,22 +22,9 @@ import {
 import { formatDate } from '../../lib/date';
 import { reports } from './stages';
 import { TaskQuestion } from './TaskQuestion';
-import { AgentRoster } from './AgentRoster';
-import {
-  agentNames,
-  agentActivity,
-  visibleAgent,
-  currentActor,
-  eventActor,
-  eventMatches,
-  type AgentFilter,
-} from './agents';
-import {
-  activeOperation,
-  operationLabel,
-  activityLabel,
-  conversationEvents,
-} from './chat/activity';
+import { AgentStatus } from './AgentStatus';
+import { agentNames, visibleAgent, eventActor, eventMatches, type AgentFilter } from './agents';
+import { conversationEvents } from './chat/activity';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
@@ -232,9 +219,6 @@ export function Conversation({
     (visibleRole === 'all' || visibleRole === 'main') &&
     !historyEvents.some((event) => event.kind === 'node_end');
   const initialPromptShown = turns.some((turn) => turn.text === project.state.project_goal);
-  const actor = currentActor(project, events);
-  const operation = activeOperation(project);
-  const latestActivity = agentActivity(project, events, actor);
   return (
     <section className="conversation-panel" aria-label="研究对话">
       <div className="conversation-heading">
@@ -250,47 +234,13 @@ export function Conversation({
           </small>
         </Tooltip>
       </div>
-      <AgentRoster
+      <AgentStatus
         project={project}
         events={events}
         nodes={nodes}
         selected={agentFilter}
         onSelect={setAgentFilter}
       />
-      {running && (visibleRole === 'all' || visibleRole === actor) && (
-        <div className="live-activity" role="status" aria-label="当前执行进展">
-          <span className="activity-indicator">
-            <LoadingOutlined spin />
-          </span>
-          <div>
-            <strong>
-              {agentNames[actor]} ·{' '}
-              {project.status === 'stopping'
-                ? '正在保存并停止'
-                : operation
-                  ? operationLabel(operation)
-                  : activityLabel(latestActivity)}
-            </strong>
-            <small>
-              {nodeLabel(latestActivity?.data.phase || project.state.current_node)}
-              {latestActivity?.data.iteration ? ` · 第 ${latestActivity.data.iteration} 轮` : ''}
-              {latestActivity?.data.waited_seconds
-                ? ` · 已等待 ${latestActivity.data.waited_seconds} 秒`
-                : ''}
-              {operation
-                ? ` · 已耗时 ${Math.round(Number(operation.elapsed_seconds || 0))} 秒`
-                : ''}
-              {operation?.checks_completed
-                ? ` · 已完成 ${operation.checks_completed} 次证据检查`
-                : ''}
-              {operation
-                ? ` · 最近活动距今 ${Math.round(Number(operation.activity_age_seconds || 0))} 秒`
-                : ''}
-              {' · 进展将实时更新'}
-            </small>
-          </div>
-        </div>
-      )}
       <div
         className="conversation-scroll"
         ref={scroller}
@@ -720,7 +670,7 @@ export function Conversation({
                 }
                 value={text}
                 onChange={(event) => setText(event.target.value)}
-                autoSize={{ minRows: 2, maxRows: 6 }}
+                autoSize={{ minRows: 3, maxRows: 8 }}
                 maxLength={20000}
                 disabled={pending}
                 onKeyDown={(event) => {

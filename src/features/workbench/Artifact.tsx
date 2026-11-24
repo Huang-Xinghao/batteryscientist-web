@@ -8,12 +8,14 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { api, ApiError, type ProjectFile } from '../../api/client';
+import type { ResearchContext } from './literature/trace';
 import './artifact.css';
 import Editor from './SafeEditor';
 import { PaneDivider } from '../../shared/file-preview/PaneDivider';
 import { isImagePath } from '../../shared/file-preview/display';
 import { siblingImages } from '../../shared/file-preview/siblingImages';
 const ModelProposal = lazy(() => import('./ModelProposal'));
+const LiteratureJourney = lazy(() => import('./literature/LiteratureJourney'));
 
 export function Artifact(
   props: Parameters<typeof FileArtifact>[0] & {
@@ -38,6 +40,7 @@ function FileArtifact({
   files,
   initialMode,
   live = false,
+  research,
 }: {
   projectId: string;
   path: string;
@@ -47,10 +50,12 @@ function FileArtifact({
   initialMode?: '预览' | '编辑';
   /** The event stream is connected and refreshes this file when it changes. */
   live?: boolean;
+  research?: ResearchContext;
 }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
   const isMarkdown = /\.md$/i.test(path);
+  const isLiterature = path === 'literature/RESEARCH_REPORT.md';
   const isTex = /\.tex$/i.test(path);
   const inlineEdit = isMarkdown || isTex;
   const images = siblingImages(path, files);
@@ -65,11 +70,20 @@ function FileArtifact({
   const dirty = mode === '编辑' && draft !== baseContent;
   const file = useQuery({
     queryKey: ['file', projectId, path],
-    queryFn: () => api.file(projectId, path),
+    queryFn: async () => {
+      try {
+        return await api.file(projectId, path);
+      } catch (error) {
+        // Literature discovery starts before the report is written. A missing
+        // report is expected here; keep real access/network failures visible.
+        if (isLiterature && error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      }
+    },
     enabled: !!path,
     refetchInterval:
-      running && (mode === '预览' || (inlineEdit && !dirty)) ? (live ? 15000 : 6000) : false,
-    refetchOnWindowFocus: mode === '预览' || (inlineEdit && !dirty),
+      running && (mode !== '编辑' || (inlineEdit && !dirty)) ? (live ? 15000 : 6000) : false,
+    refetchOnWindowFocus: mode !== '编辑' || (inlineEdit && !dirty),
   });
   const [expanded, setExpanded] = useState(false);
   const [pdfPath, setPdfPath] = useState('');
@@ -147,7 +161,7 @@ function FileArtifact({
     return () => window.removeEventListener('beforeunload', handler);
   }, [dirty]);
   function changeMode(next: string) {
-    if (next === '预览' && dirty) {
+    if (next !== '编辑' && dirty) {
       modal.confirm({ title: '放弃未保存的修改？', onOk: () => setMode(next) });
       return;
     }
@@ -176,7 +190,7 @@ function FileArtifact({
       <div className="artifact-toolbar">
         <span className="artifact-filename" title={path}>
           <FileTextOutlined />
-          {path.split('/').pop()}
+          {isLiterature ? '文献研究图谱' : path.split('/').pop()}
         </span>
         <Space wrap className="artifact-actions">
           {!isMarkdown && (
@@ -184,7 +198,7 @@ function FileArtifact({
               {expanded ? '退出全屏' : '全屏查看'}
             </Button>
           )}
-          {file.data?.editable && (!inlineEdit || isMarkdown) && (
+          {!isLiterature && file.data?.editable && (!inlineEdit || isMarkdown) && (
             <Segmented
               size="small"
               aria-label="显示方式"
@@ -235,6 +249,7 @@ function FileArtifact({
           <Button
             size="small"
             aria-label="下载文件"
+            disabled={isLiterature && !file.data}
             href={api.download(projectId, path)}
             target="_blank"
             rel="noreferrer"
@@ -280,7 +295,18 @@ function FileArtifact({
         role="region"
         aria-label="文件内容"
       >
-        {file.isPending ? (
+        {isLiterature ? (
+          <Suspense fallback={<Spin className="editor-loading" />}>
+            <LiteratureJourney
+              content={file.data?.content || ''}
+              research={research}
+              reportLoading={file.isPending}
+              reportWaiting={file.isSuccess && !file.data}
+              reportError={file.isError ? (file.error as Error).message : ''}
+              retryReport={() => void file.refetch()}
+            />
+          </Suspense>
+        ) : file.isPending ? (
           <div className="artifact-padding">
             <Skeleton active paragraph={{ rows: 10 }} />
           </div>

@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Markdown reports open in the reading view; switch to the editor before editing.
 async function showEditor(page: Page) {
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('DATA_REPORT.md');
+  await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
   await page.locator('.artifact-actions .ant-segmented-item').filter({ hasText: '编辑' }).click();
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
 }
@@ -15,7 +17,6 @@ async function openReport(page: Page) {
   if (page.viewportSize()!.width <= 700) {
     await page.getByRole('button', { name: '产物工作区', exact: true }).click();
   }
-  await expect(page.locator('.markdown-reading')).toBeVisible();
   await showEditor(page);
   await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
@@ -55,7 +56,7 @@ for (const width of [1512, 360]) {
     await expect(save).toBeDisabled();
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: '下载草稿' }).click();
-    expect((await downloadPromise).suggestedFilename()).toBe('draft-RESEARCH_REPORT.md');
+    expect((await downloadPromise).suggestedFilename()).toBe('draft-DATA_REPORT.md');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
@@ -79,7 +80,7 @@ for (const width of [1512, 360]) {
 test('concurrent file changes retain the draft and require explicit reload', async ({ page }) => {
   const id = await openReport(page);
   const editor = await appendDraft(page, '\n\n必须保留的草稿。');
-  const endpoint = `/api/projects/${id}/file?path=literature%2FRESEARCH_REPORT.md`;
+  const endpoint = `/api/projects/${id}/file?path=data-search%2FDATA_REPORT.md`;
   const latest = await (await page.request.get(endpoint)).json();
   const external = await page.request.put(endpoint, {
     data: { content: latest.content + '\n\n外部更新的报告。', sha256: latest.sha256 },
@@ -144,7 +145,7 @@ test('save shortcut keeps edits typed while the saved snapshot is in flight', as
   await expect(page.locator('.monaco-editor').first()).toContainText('保存途中继续输入。');
   await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeEnabled();
   const saved = await (
-    await page.request.get(`/api/projects/${id}/file?path=literature%2FRESEARCH_REPORT.md`)
+    await page.request.get(`/api/projects/${id}/file?path=data-search%2FDATA_REPORT.md`)
   ).json();
   expect(saved.content).toContain('已提交的快照。');
   expect(saved.content).not.toContain('保存途中继续输入。');

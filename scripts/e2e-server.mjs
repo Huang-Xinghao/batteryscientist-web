@@ -49,6 +49,11 @@ await writeFile(
   ),
 );
 await mkdir(join(project, 'literature'), { recursive: true });
+await mkdir(join(project, 'data-search'), { recursive: true });
+await writeFile(
+  join(project, 'data-search', 'DATA_REPORT.md'),
+  '# 数据报告\n\n用于验证通用报告编辑。\n',
+);
 await writeFile(
   join(project, 'literature', 'RESEARCH_REPORT.md'),
   '# 电池寿命研究\n\n这是用于浏览器测试的隔离报告。\n\n## 研究证据\n\n需要验证跨电芯泛化。\n\n$E = mc^2$\n',

@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      '.e2e-dist/**',
       'node_modules/**',
       'src/api/schema.d.ts',
       'artifacts/**',

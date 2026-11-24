@@ -4,6 +4,11 @@ test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: 'wait' });
 });
 
+async function selectAgent(page: Page, name: string) {
+  await page.getByRole('button', { name: '查看当前 Agent 任务与记录' }).click();
+  await page.getByRole('button', { name, exact: true }).click();
+}
+
 async function fixture(
   page: Page,
   {
@@ -73,7 +78,7 @@ async function fixture(
             instruction: '设计独立的对照实验',
             is_active: running,
           },
-          { role: 'paper_writer', status: 'idle', is_active: false },
+          { role: 'paper_writer', status: 'completed', is_active: false },
         ],
       },
     });
@@ -149,23 +154,23 @@ async function fixture(
 
 test('role views follow work, allow switching and survive refresh', async ({ page }) => {
   await fixture(page);
-  await expect(page.getByText('实验 Agent正在工作')).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('实验 Agent');
   await expect(page.getByText('实验角色正在规划对照组', { exact: true })).toBeVisible();
   await expect(page.getByText('主控正在核对研究目标', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '查看主控 Agent', exact: true }).click();
+  await selectAgent(page, '查看主控 Agent');
   await expect(page.getByText('主控正在核对研究目标', { exact: true })).toBeVisible();
   await expect(page.getByText('实验角色正在规划对照组', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '查看论文 Agent', exact: true }).click();
+  await selectAgent(page, '查看论文 Agent');
   await expect(page.getByText('论文角色的写作记录', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '全部记录', exact: true }).click();
+  await selectAgent(page, '全部记录');
   await expect(page.getByText('主控 → 实验 Agent', { exact: true })).toBeVisible();
   await expect(page.getByText('主控正在核对研究目标', { exact: true })).toBeVisible();
   await expect(page.getByText('实验角色正在规划对照组', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('实验 Agent正在工作')).toBeVisible();
-  await expect(page.getByRole('button', { name: '跟随当前', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('实验 Agent');
+  await expect(page.getByRole('button', { name: '查看当前 Agent 任务与记录' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
   );
   await expect(page.getByText('实验角色正在规划对照组', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'artifacts/agent-roles.png', fullPage: true });
@@ -224,11 +229,9 @@ test('live handoff returns focus to main without leaving the previous role worki
     });
   });
   await page.reload();
-  await expect(page.getByText('主控 Agent正在工作')).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('主控 Agent');
   await expect(page.getByText('主控正在核对研究目标', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).not.toContainText(
-    '工作中',
-  );
+  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).toHaveCount(0);
 });
 
 test('terminal snapshot takes precedence over previous web run events', async ({ page }) => {
@@ -254,11 +257,9 @@ test('terminal snapshot takes precedence over previous web run events', async ({
     });
   });
   await page.reload();
-  await expect(page.getByText('论文 Agent正在工作')).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('论文 Agent');
   await expect(page.getByText('论文角色的写作记录', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).not.toContainText(
-    '工作中',
-  );
+  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).toHaveCount(0);
 });
 
 test('auto-mode proposal does not present expert review controls', async ({ page }) => {
@@ -270,7 +271,8 @@ test('auto-mode proposal does not present expert review controls', async ({ page
 test('role controls fit mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await fixture(page);
-  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('实验 Agent');
+  await expect(page.getByRole('button', { name: '查看实验 Agent', exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.screenshot({ path: 'artifacts/agent-roles-mobile.png', fullPage: true });
 });
@@ -334,19 +336,19 @@ test('Wiki progress streams public text and preserves the original user request'
     });
   });
   await page.reload();
-  await expect(page.getByText('Wiki Agent正在工作')).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('Wiki Agent');
   await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('正在生成回复');
   await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);
   await expect(page.getByText('旧请求残片', { exact: true })).toHaveCount(0);
   await expect(page.getByText('内部推理不展示', { exact: true })).toHaveCount(0);
   await expect(page.locator('.user-message')).toHaveCount(0);
-  await page.getByRole('button', { name: '查看主控 Agent', exact: true }).click();
+  await selectAgent(page, '查看主控 Agent');
   await expect(page.locator('.user-message')).toContainText(original);
   await expect(page.locator('.user-message')).not.toContainText(goal);
   await page.getByText('主控整理的研究目标', { exact: true }).click();
   await expect(page.locator('.research-goal')).toContainText(goal);
   await expect(page.getByRole('textbox', { name: '研究指令', exact: true })).toHaveValue('');
-  await page.getByRole('button', { name: '查看Wiki Agent', exact: true }).click();
+  await selectAgent(page, '查看Wiki Agent');
   await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);
   await page.screenshot({ path: 'artifacts/wiki-live-progress.png', fullPage: true });
   finished = true;
@@ -359,9 +361,9 @@ test('context compaction stays visible through heartbeats and clears after compl
   page,
 }) => {
   await fixture(page, { compacting: true });
-  const card = page.getByRole('button', { name: '查看实验 Agent', exact: true });
+  const card = page.getByRole('status', { name: '当前执行进展' });
   await expect(card).toContainText('正在压缩上下文');
-  await expect(page.getByText('正在压缩上下文', { exact: true }).first()).toBeVisible();
+  await expect(card).toBeVisible();
   await page.route('**/api/projects/*/activity*', (route) =>
     route.fulfill({
       json: {
@@ -379,7 +381,7 @@ test('context compaction stays visible through heartbeats and clears after compl
     }),
   );
   await page.reload();
-  await expect(card).toContainText('工作中');
+  await expect(card).toContainText('实验 Agent');
   await expect(card).not.toContainText('正在压缩上下文');
   await expect(
     page.getByText('实验 Agent · 上下文压缩完成，继续执行', { exact: true }),
@@ -392,8 +394,9 @@ test('slow operations show stages elapsed time and evidence activity after refre
   await fixture(page, { operationStage: 'checking_evidence' });
   const progress = page.getByRole('status', { name: '当前执行进展' });
   await expect(progress).toContainText('审阅者正在核查证据');
-  await expect(progress).toContainText('已耗时 123 秒');
-  await expect(progress).toContainText('已完成 4 次证据检查');
+  await page.getByRole('button', { name: '查看当前 Agent 任务与记录' }).click();
+  await expect(page.getByRole('dialog')).toContainText('已耗时 123 秒');
+  await expect(page.getByRole('dialog')).toContainText('已完成 4 次证据检查');
   await page.reload();
   await expect(progress).toContainText('审阅者正在核查证据');
 });
@@ -444,17 +447,68 @@ test('each role loads its own older messages and operations after switching and 
       },
     });
   });
-  await page.getByRole('button', { name: '查看论文 Agent', exact: true }).click();
+  await selectAgent(page, '查看论文 Agent');
   await expect(page.locator('.tool-activity')).toContainText('Read');
   await expect(page.getByText('实验角色最近的记录', { exact: true })).toBeHidden();
   await page.getByRole('button', { name: '加载更早的执行记录' }).click();
   await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '查看实验 Agent', exact: true }).click();
+  await selectAgent(page, '查看实验 Agent');
   await expect(page.getByText('实验角色最近的记录', { exact: true })).toBeVisible();
   await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeHidden();
   await page.reload();
-  await page.getByRole('button', { name: '查看论文 Agent', exact: true }).click();
+  await selectAgent(page, '查看论文 Agent');
   await expect(page.locator('.tool-activity')).toContainText('Read');
   await page.getByRole('button', { name: '加载更早的执行记录' }).click();
   await expect(page.getByText('论文角色更早的历史消息', { exact: true })).toBeVisible();
+});
+
+test('compact status hides unused agents and opens current task with history controls', async ({
+  page,
+}) => {
+  await fixture(page);
+  const bar = page.getByRole('status', { name: '当前执行进展' });
+  await expect(bar).toContainText('实验 Agent');
+  expect((await bar.boundingBox())!.height).toBeLessThan(50);
+  await expect(page.getByText('研究团队', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '查看Wiki Agent' })).toHaveCount(0);
+  await page.getByRole('button', { name: '查看当前 Agent 任务与记录' }).click();
+  const panel = page.getByRole('dialog');
+  await expect(panel).toContainText('设计独立的对照实验');
+  await expect(panel.getByRole('button', { name: '全部记录', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: '查看Wiki Agent' })).toHaveCount(0);
+  await panel.getByRole('button', { name: '全部记录', exact: true }).click();
+  await expect(panel).not.toBeVisible();
+  await expect(bar).toContainText('实验 Agent');
+  await expect(page.getByText('主控正在核对研究目标', { exact: true })).toBeVisible();
+});
+test('idle status shows no working agents and concurrent operations show only active roles', async ({
+  page,
+}) => {
+  await fixture(page, { running: false });
+  const bar = page.getByRole('status', { name: '当前执行进展' });
+  await expect(bar).toContainText('等待你的指令');
+  await expect(bar).not.toContainText('Agent');
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...project,
+        status: 'running',
+        progress: {
+          ...project.progress,
+          operations: [
+            { role: 'experiment', status: 'running', stage: 'checking_evidence' },
+            { role: 'wiki_agent', status: 'running', stage: 'writing_report' },
+            { role: 'paper_writer', status: 'finished' },
+          ],
+        },
+      },
+    });
+  });
+  await page.reload();
+  await expect(bar).toContainText('实验 Agent');
+  await expect(bar).toContainText('Wiki Agent');
+  await expect(bar).not.toContainText('论文 Agent');
 });

@@ -1,0 +1,82 @@
+.literature-view {
+  height: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+.literature-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 18px 8px;
+}
+.literature-toolbar strong {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.literature-caption {
+  margin: 0;
+  padding: 0 18px 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.research-map {
+  flex: 1;
+  min-height: 300px;
+}
+.research-map-card {
+  width: 300px;
+  height: 145px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.research-map-card small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.research-map-card strong {
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.research-map-card > span {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.research-map-card.kind-goal,
+.research-map-card.kind-gap {
+  border-color: var(--brand);
+  background: var(--surface-2);
+}
+.research-map-card.selected,
+.research-map .react-flow__node:focus-visible .research-map-card {
+  outline: 2px solid var(--brand);
+}
+.research-detail.markdown {
+  min-height: 0;
+  padding: 0;
+  margin-bottom: 18px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.research-map {
+  position: relative;
+  overflow: hidden;
+}
+.literature-toolbar,
+.literature-caption {
+  flex-shrink: 0;
+}

@@ -17,13 +17,6 @@ export const agentNames: Record<AgentRole, string> = {
   paper_writer: '论文 Agent',
   wiki_agent: 'Wiki Agent',
 };
-export const agentDescriptions: Record<AgentRole, string> = {
-  main: '协调、派单与审阅',
-  idea_generator: '文献、数据与研究方案',
-  experiment: '实验规划、实现与执行',
-  paper_writer: '图表、写作与论文改进',
-  wiki_agent: '论文与研究成果整理入库',
-};
 const phaseRoles: Record<string, AgentRole> = {
   coordinator: 'main',
   literature: 'idea_generator',
@@ -128,11 +121,4 @@ export function agentActivity(project: Project, events: ActivityEvent[], actor: 
           'model_error',
         ].includes(event.kind),
     );
-}
-
-export function isCompacting(event?: ActivityEvent) {
-  return (
-    event?.kind === 'context_compacting' ||
-    (event?.kind === 'model_heartbeat' && event.data.context_compacting === true)
-  );
 }

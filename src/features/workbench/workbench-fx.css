@@ -160,37 +160,16 @@
   }
 }
 
-/* One header row for the conversation: the agent pills carry the live status. */
+/* The compact Agent status bar is the conversation header. */
 .research-layout .conversation-panel > .conversation-heading {
   display: none;
 }
-.research-layout .conversation-panel .agent-roster {
-  padding: 12px 16px 10px;
-}
-
 @media (max-width: 700px) {
-  /* Phone: one scrolling row of agents, a shorter progress cell, icon-only settings. */
-  .research-layout .conversation-panel .agent-role-grid {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .research-layout .conversation-panel .agent-roster {
-    padding: 8px 12px;
-  }
-  .research-layout .conversation-panel .agent-roster-heading {
-    margin-bottom: 6px;
-  }
   .composer-settings-label {
     display: none;
   }
   .conversation-panel .composer-tools {
     flex-wrap: wrap;
     gap: 6px;
-  }
-}
-@media (max-width: 700px) {
-  .research-layout .conversation-panel .agent-role-card {
-    flex: 0 0 auto;
   }
 }

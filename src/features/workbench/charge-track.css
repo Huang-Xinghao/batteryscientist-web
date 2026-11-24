@@ -303,3 +303,24 @@
     margin-bottom: 4px;
   }
 }
+.workbench-fold {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--muted);
+  background: var(--surface-2);
+  cursor: pointer;
+  font-size: 12px;
+}
+.charge-track-scroll[hidden] {
+  display: none;
+}
+.charge-track.is-collapsed {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.charge-track.is-collapsed .charge-track-heading {
+  margin-bottom: 0;
+}

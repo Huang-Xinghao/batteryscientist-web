@@ -139,7 +139,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   }
   function pickStage(node: string) {
     const path = reports[node];
-    if (files.data?.files.some((entry) => entry.path === path)) {
+    if (node === 'literature' || files.data?.files.some((entry) => entry.path === path)) {
       openFile(path, node);
       return;
     }
@@ -189,7 +189,10 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
         ? reports.refine
         : reports[currentNode];
   const file =
-    selectedFile || (fileList.some((entry) => entry.path === defaultFile) ? defaultFile : '');
+    selectedFile ||
+    (defaultFile === reports.literature || fileList.some((entry) => entry.path === defaultFile)
+      ? defaultFile
+      : '');
   const latexOpen = /\.tex$/i.test(file) && tab === 'report';
   const paperFocus = tab === 'report' && (latexOpen || /^paper\/.*\.pdf$/i.test(file));
   const proposalFocus = file === reports.refine;
@@ -491,6 +494,14 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                       reviewRequest={reviewRequest}
                       collaborationMode={p.state.mode === 'auto' ? 'auto' : 'expert'}
                       projectId={id}
+                      research={{
+                        goal: p.state.project_goal || '',
+                        events: activity.events,
+                        hasOlder: activity.hasOlder,
+                        loadingOlder: activity.loadingOlder,
+                        loadOlder: () => void activity.loadOlder(),
+                        error: activity.error,
+                      }}
                       path={file}
                       running={running}
                       live={live}

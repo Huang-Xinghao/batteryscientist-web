@@ -1,0 +1,77 @@
+.agent-status-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.agent-status-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 5px 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.agent-status-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agent-status-text strong {
+  font-weight: 500;
+}
+.agent-status-chevron {
+  color: var(--muted);
+  margin-left: auto;
+}
+.agent-status-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.agent-status-dot.is-running {
+  background: var(--charge-b);
+  box-shadow: 0 0 6px var(--charge-b);
+}
+.agent-history-filter {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.agent-record-actions {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+.agent-record-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.agent-record-list .ant-btn {
+  text-align: left;
+}
+.agent-task-instruction {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

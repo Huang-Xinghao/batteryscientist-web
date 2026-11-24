@@ -68,6 +68,7 @@ export function ChargeTrack({
   const segments = useRef<Record<string, HTMLButtonElement | null>>({});
   const previousDone = useRef<number | null>(null);
   const [bump, setBump] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
 
   // Celebrate a stage that just finished while the page was open.
   useEffect(() => {
@@ -86,19 +87,28 @@ export function ChargeTrack({
         ? '全部阶段已完成'
         : '尚未开始';
   return (
-    <section className="charge-track" aria-label="研究进度">
+    <section className={`charge-track ${collapsed ? 'is-collapsed' : ''}`} aria-label="研究进度">
       <div className="charge-track-heading">
         <h2>研究进度</h2>
         <p>
           已完成 <strong>{doneCount}</strong> / {nodes.length}，{summary}
         </p>
+        <button
+          type="button"
+          className="workbench-fold"
+          aria-label={collapsed ? '展开研究进度' : '收起研究进度'}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? '展开 ▾' : '收起 ▴'}
+        </button>
         {bump > 0 && (
           <span key={bump} className="charge-bump" aria-hidden="true">
             +1 阶段完成
           </span>
         )}
       </div>
-      <div className="charge-track-scroll">
+      <div className="charge-track-scroll" hidden={collapsed}>
         <div className="charge-track-body">
           <div className="charge-cell">
             <div className="charge-groups" aria-hidden="true">

@@ -58,6 +58,8 @@ async function mockCoordinatorReply(page: import('@playwright/test').Page) {
 
 // Markdown reports open in the reading view; switch to the editor before editing.
 async function showEditor(page: import('@playwright/test').Page) {
+  await page.getByRole('combobox', { name: '选择项目文件' }).fill('DATA_REPORT.md');
+  await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
   await page.locator('.artifact-actions .ant-segmented-item').filter({ hasText: '编辑' }).click();
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
 }
@@ -85,7 +87,7 @@ test('lists real projects, searches, and opens a research report', async ({ page
   await expect(page.getByText('没有匹配的项目')).toBeVisible();
   await page.getByPlaceholder('搜索项目或研究目标').fill('电池');
   await page.locator('a.project-card').click();
-  await expect(page.locator('.markdown-reading')).toContainText('电池寿命研究');
+  await expect(page.getByLabel('文献研究图谱', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   await expect(page.getByText('优先研究哪一个泛化问题？')).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-tested.png', fullPage: true });
@@ -118,7 +120,8 @@ test('edits and saves a report through the API', async ({ page }) => {
   await page.getByRole('button', { name: /保\s*存/ }).click();
   await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
   await page.reload();
-  await expect(page.locator('.markdown-reading')).toContainText('浏览器保存验证。');
+  await showEditor(page);
+  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
 });
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
@@ -149,7 +152,7 @@ test('mobile workbench fits the viewport and file navigation works', async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('RESEARCH_REPORT.md');
   await page.locator('.directory-file').filter({ hasText: 'RESEARCH_REPORT.md' }).click();
-  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  await expect(page.getByLabel('文献研究图谱', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-mobile-tested.png', fullPage: true });
 });
 
@@ -730,7 +733,7 @@ for (const width of [1512, 390]) {
     await expect(page.getByRole('region', { name: '方案任务进度' })).toHaveCount(0);
     await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
     await page.getByRole('button', { name: /^文献研究，/ }).click();
-    await expect(page.locator('.artifact-filename')).toHaveText('RESEARCH_REPORT.md');
+    await expect(page.locator('.artifact-filename')).toHaveText('文献研究图谱');
     await showEditor(page);
     await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
   });
