@@ -10,7 +10,10 @@ const python =
 const schema = JSON.parse(
   execFileSync(
     python,
-    ['-c', 'import json; from batteryscientist.api.app import app; print(json.dumps(app.openapi()))'],
+    [
+      '-c',
+      'import json; from batteryscientist.api.app import app; print(json.dumps(app.openapi()))',
+    ],
     { cwd: backend, encoding: 'utf8' },
   ),
 );

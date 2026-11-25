@@ -45,6 +45,9 @@ function ResearchCard({ data, selected }: NodeProps<ResearchNode>) {
   );
 }
 const nodeTypes = { research: ResearchCard };
+// Fitting never shrinks cards below a readable size; large maps scroll instead,
+// and the zoom controls still allow zooming further out.
+const fitOptions = { minZoom: 0.45, maxZoom: 0.8, padding: 0.08 };
 function FitCanvas() {
   const { fitView } = useReactFlow();
   const initialized = useNodesInitialized();
@@ -54,7 +57,7 @@ function FitCanvas() {
   useEffect(() => {
     if (!viewportReady || !width || !height) return;
     // Wait for the mobile pane's visibility/layout transition before fitting.
-    const timer = setTimeout(() => void fitView({ maxZoom: 0.8, padding: 0.08 }), 150);
+    const timer = setTimeout(() => void fitView(fitOptions), 150);
     return () => clearTimeout(timer);
   }, [fitView, initialized, viewportReady, width, height]);
   return null;
@@ -135,6 +138,15 @@ export default function LiteratureJourney({
     });
   };
   const center = Math.max(papers.length - 1, searches.length - 1, 0) / 2;
+  // Stages without nodes take no column, so a sparse map stays compact and readable.
+  const stages: Kind[] = [
+    'goal',
+    'scope',
+    ...(searches.length ? (['search'] as const) : []),
+    ...(papers.length ? (['paper', 'problem'] as const) : []),
+    'gap',
+  ];
+  const column = (kind: Kind) => stages.indexOf(kind);
   add('goal', 'goal', research?.goal || '尚未记录研究 Goal', 0, center);
   add('scope', 'scope', scope?.text || '等待 Agent 整理调研范围', 1, center);
   link('goal', 'scope', '围绕目标调研', true);
@@ -143,7 +155,7 @@ export default function LiteratureJourney({
       action.id,
       'search',
       action.query || '检索词未记录',
-      2,
+      column('search'),
       index,
       `${action.status === 'done' ? '已完成' : action.status === 'error' ? '失败' : '暂无完成回执'} · ${action.candidates.length} 条已记录结果`,
     );
@@ -163,7 +175,7 @@ export default function LiteratureJourney({
       paper.id,
       'paper',
       paper.title,
-      3,
+      column('paper'),
       index,
       reads.length ? '已读取 Wiki · 报告选用' : '报告选用',
     );
@@ -180,7 +192,13 @@ export default function LiteratureJourney({
     );
     if (matches.length) matches.forEach((action) => link(action.id, paper.id, '检索命中'));
     else link('scope', paper.id, '报告选用', true);
-    add(`problem-${paper.id}`, 'problem', paper.problem || '报告尚未填写解决的问题', 4, index);
+    add(
+      `problem-${paper.id}`,
+      'problem',
+      paper.problem || '报告尚未填写解决的问题',
+      column('problem'),
+      index,
+    );
     link(paper.id, `problem-${paper.id}`, '解决');
   });
   gaps.forEach((gap, index) => {
@@ -189,7 +207,7 @@ export default function LiteratureJourney({
       gap.id,
       'gap',
       gap.text || '报告尚未填写 Gap',
-      5,
+      column('gap'),
       center + index,
       evidence.length ? `${evidence.length} 篇文献被明确提及` : '报告未明确关联具体论文',
     );
@@ -197,7 +215,7 @@ export default function LiteratureJourney({
     else link('scope', gap.id, '报告综合判断', true);
   });
   if (!gaps.length) {
-    add('gap-pending', 'gap', '等待 Agent 形成 Gap 判断', 5, center);
+    add('gap-pending', 'gap', '等待 Agent 形成 Gap 判断', column('gap'), center);
     link('scope', 'gap-pending', '待归纳', true);
   }
   const detail = nodes.find((node) => node.id === selected);
@@ -241,8 +259,9 @@ export default function LiteratureJourney({
           nodesDraggable={false}
           nodesConnectable={false}
           edgesFocusable={false}
+          colorMode="dark"
           fitView
-          fitViewOptions={{ maxZoom: 0.8, padding: 0.08 }}
+          fitViewOptions={fitOptions}
           minZoom={0.03}
         >
           <FitCanvas />
