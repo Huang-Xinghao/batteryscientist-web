@@ -35,6 +35,7 @@ import { ProcessGroup } from './chat/ProcessGroup';
 import { toolStep, type Step } from './chat/steps';
 import { StreamingMarkdown } from './chat/StreamingMarkdown';
 import { ThinkingBubble } from './chat/ThinkingBubble';
+import { ReasoningBlock } from './chat/ReasoningBlock';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
@@ -299,6 +300,26 @@ export function Conversation({
       );
     const label = nodeLabel(data.node || data.phase);
     const round = data.iteration ? `第 ${data.iteration} 轮` : '';
+    if (event.kind === 'assistant_reasoning') {
+      const content = visibleText(data.content);
+      if (!content) return null;
+      const started = events.find(
+        (record) =>
+          record.kind === 'model_start' &&
+          record.run_id === event.run_id &&
+          record.data.phase === data.phase &&
+          record.data.iteration === data.iteration,
+      );
+      return (
+        <ReasoningBlock
+          key={item.key}
+          content={content}
+          streaming={data.streaming === true}
+          startedAt={started?.created_at}
+          endedAt={event.created_at}
+        />
+      );
+    }
     if (event.kind === 'assistant_output') {
       const content = visibleText(data.content);
       return content ? (
@@ -567,7 +588,9 @@ export function Conversation({
   }
   // While an agent works and no reply is streaming yet, say so instead of going quiet.
   const tail = timeline.at(-1)?.event;
-  const streamingTail = tail?.kind === 'assistant_output' && tail.data.streaming === true;
+  const streamingTail =
+    (tail?.kind === 'assistant_output' || tail?.kind === 'assistant_reasoning') &&
+    tail.data.streaming === true;
   const groupTail = !!tail && groupedKinds.has(tail.kind);
   const actor = currentActor(project, events);
   const lastModelStart = [...events].reverse().find((event) => event.kind === 'model_start');
