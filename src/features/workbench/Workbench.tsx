@@ -24,6 +24,7 @@ import { FigureGallery } from './FigureGallery';
 import { RunDialog } from './RunDialog';
 import { reports } from './stages';
 import { useActivity } from './useActivity';
+import { runIssue } from './runIssue';
 
 export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
   const { id = '' } = useParams();
@@ -165,6 +166,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
       </div>
     );
   const p = project.data;
+  const issue = runIssue(p);
   const running = active(p.status);
   const checkpoint = p.status === 'awaiting_user' ? p.state.expert_checkpoint : undefined;
   const fileList = files.data?.files || [];
@@ -546,12 +548,8 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
         className="workbench-drawer"
       >
         <p className="muted">执行事件展示在研究对话中；这里保留原始运行日志。</p>
-        {(p.runs[0]?.error || p.state.error) && (
-          <Alert
-            type="error"
-            message="上次运行需要处理"
-            description={p.runs[0]?.error || p.state.error}
-          />
+        {issue && (
+          <Alert type={issue.type} message={issue.message} description={issue.description} />
         )}
         {logs.isError ? (
           <Alert
