@@ -1,0 +1,139 @@
+/*
+ * Workbench layout: the conversation and the workspace are the page.
+ * Chrome (progress, panel headers, composer) is kept to thin bands around them.
+ */
+.workbench-page:has(.research-layout) {
+  padding: 8px 10px 10px;
+  gap: 8px;
+  background: var(--bg);
+}
+.workbench-page:has(.research-layout) > .charge-track {
+  border-radius: 12px;
+  padding: 6px 14px;
+}
+.workbench-page:has(.research-layout) > .charge-track:not(.is-collapsed) {
+  padding-bottom: 6px;
+}
+.charge-track-heading {
+  min-height: 36px;
+  align-items: center;
+}
+
+/* The two panes are cards with equal weight; the gutter is the resize handle. */
+.research-layout {
+  gap: 0;
+}
+.research-layout .conversation-panel,
+.research-layout .workspace-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Workspace: the title sits on the tab row instead of a row of its own. */
+.research-layout .workspace-panel {
+  position: relative;
+}
+.research-layout .workspace-panel > .workspace-panel-header {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.research-layout .workspace-panel > .workspace-panel-header > * {
+  pointer-events: auto;
+}
+.research-layout .workspace-panel > .workspace-panel-header > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.research-layout .workspace-panel > .workspace-panel-header h2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.research-layout .workspace-tabs > .ant-tabs-nav {
+  min-height: 46px;
+  margin: 0;
+  padding: 0 200px 0 16px;
+}
+.research-layout .workspace-tabs > .ant-tabs-nav .ant-tabs-tab {
+  padding: 12px 0;
+  font-size: 14px;
+}
+
+/* Conversation: readable type, generous width for answers. */
+.research-layout .conversation-panel .conversation-messages {
+  padding: 16px 20px 24px;
+  gap: 12px;
+}
+.research-layout .conversation-panel .chat-markdown {
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+.research-layout .conversation-panel .agent-message {
+  max-width: 100%;
+}
+
+/* Composer: two lines when idle, tools in one compact row. */
+.research-layout .conversation-panel .chat-composer {
+  margin: 0 14px;
+  padding: 10px 12px 8px;
+}
+.research-layout .conversation-panel .chat-composer textarea {
+  font-size: 14px;
+}
+.research-layout .conversation-panel .composer-hint {
+  margin: 6px 0 10px;
+  font-size: 11.5px;
+}
+
+/* Streaming caret rides on the last line of text; the caret span is the last child,
+   so the last Markdown block is the second-last child. Other blocks (code, tables)
+   keep the standalone caret. */
+.chat-markdown.is-streaming > :is(p, h1, h2, h3, h4, blockquote):nth-last-child(2)::after,
+.chat-markdown.is-streaming > :is(ol, ul):nth-last-child(2) > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 1.05em;
+  margin-left: 4px;
+  vertical-align: -0.16em;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--charge-a), var(--charge-b));
+  box-shadow: 0 0 10px var(--glow);
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+.chat-markdown.is-streaming:has(> :is(p, h1, h2, h3, h4, blockquote, ol, ul):nth-last-child(2))
+  > .stream-caret {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .workbench-page:has(.research-layout) {
+    padding: 0;
+    gap: 0;
+  }
+  .research-layout .conversation-panel,
+  .research-layout .workspace-panel {
+    border-radius: 0;
+    border-width: 0;
+  }
+  .research-layout .workspace-tabs > .ant-tabs-nav {
+    padding-right: 120px;
+  }
+  .research-layout .workspace-panel > .workspace-panel-header .workspace-file-count {
+    display: none;
+  }
+}

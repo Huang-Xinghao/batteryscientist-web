@@ -429,15 +429,17 @@ for (const width of [1512, 360]) {
     await expect(page.locator('.agent-status-bar')).toBeVisible();
     expect((await page.locator('.agent-status-bar').boundingBox())!.height).toBeLessThan(60);
     await expect(page.getByText('研究团队', { exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: '收起研究进度' }).click();
+    // The progress starts collapsed to one line so the conversation gets the height.
     await expect(page.getByRole('button', { name: '展开研究进度' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
     await expect(page.locator('.charge-track-scroll')).toBeHidden();
-    expect((await conversation.boundingBox())!.height).toBeGreaterThan(initial);
     await page.getByRole('button', { name: '展开研究进度' }).click();
     await expect(page.locator('.charge-track-scroll')).toBeVisible();
+    expect((await conversation.boundingBox())!.height).toBeLessThan(initial);
+    await page.getByRole('button', { name: '收起研究进度' }).click();
+    await expect(page.locator('.charge-track-scroll')).toBeHidden();
     await progress.getByRole('link', { name: '返回研究项目' }).click();
     await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
   });

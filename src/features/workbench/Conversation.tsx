@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, App, Button, Input, Segmented, Tooltip } from 'antd';
 import {
   ArrowDownOutlined,
@@ -22,11 +22,23 @@ import { formatDate } from '../../lib/date';
 import { reports } from './stages';
 import { TaskQuestion } from './TaskQuestion';
 import { AgentStatus } from './AgentStatus';
-import { agentNames, visibleAgent, eventActor, eventMatches } from './agents';
-import { conversationEvents } from './chat/activity';
+import {
+  agentActivity,
+  agentNames,
+  currentActor,
+  visibleAgent,
+  eventActor,
+  eventMatches,
+} from './agents';
+import { activityLabel, conversationEvents } from './chat/activity';
+import { ProcessGroup } from './chat/ProcessGroup';
+import { toolStep, type Step } from './chat/steps';
+import { StreamingMarkdown } from './chat/StreamingMarkdown';
+import { ThinkingBubble } from './chat/ThinkingBubble';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
+import './chat/process.css';
 import { useActivity } from './useActivity';
 import { ProjectFileLink } from '../../shared/file-preview/ProjectFileLink';
 import { runIssue } from './runIssue';
@@ -220,6 +232,353 @@ export function Conversation({
     (visibleRole === 'all' || visibleRole === 'main') &&
     !historyEvents.some((event) => event.kind === 'node_end');
   const initialPromptShown = turns.some((turn) => turn.text === project.state.project_goal);
+  type TimelineItem = (typeof timeline)[number];
+  const renderItem = (item: TimelineItem): ReactNode => {
+    const event = item.event;
+    if (!event)
+      return (
+        <article key={item.key} className="chat-message user-message">
+          <div className="message-role">
+            你 · {item.label}
+            <time>{formatDate(item.time)}</time>
+          </div>
+          <p>{item.text}</p>
+          <MessageActions
+            content={item.text}
+            onReuse={
+              !running && !pending && !checkpoint ? () => reuseInstruction(item.text) : undefined
+            }
+          />
+        </article>
+      );
+    const data = event.data;
+    if (event.kind === 'conversation_turn')
+      return (
+        <div key={item.key}>
+          <article className="chat-message user-message">
+            <div className="message-role">
+              你<time>{formatDate(item.time)}</time>
+            </div>
+            <p>{String(data.prompt || '')}</p>
+            <MessageActions
+              content={String(data.prompt || '')}
+              onReuse={
+                !running && !pending && !checkpoint
+                  ? () => reuseInstruction(String(data.prompt || ''))
+                  : undefined
+              }
+            />
+          </article>
+          <article className="chat-message agent-message">
+            <div className="message-role">
+              <span className="agent-symbol">✦</span> BatteryScientist
+            </div>
+            <div className="chat-markdown">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ href, title, children }) => (
+                    <ProjectFileLink
+                      projectId={project.id}
+                      onOpen={onOpen}
+                      projectRoot={project.path}
+                      href={href}
+                      title={title}
+                    >
+                      {children}
+                    </ProjectFileLink>
+                  ),
+                }}
+              >
+                {visibleText(data.reply)}
+              </ReactMarkdown>
+            </div>
+            <MessageActions content={visibleText(data.reply)} />
+          </article>
+        </div>
+      );
+    const label = nodeLabel(data.node || data.phase);
+    const round = data.iteration ? `第 ${data.iteration} 轮` : '';
+    if (event.kind === 'assistant_output') {
+      const content = visibleText(data.content);
+      return content ? (
+        <article key={item.key} className="chat-message agent-message">
+          <div className="message-role">
+            <span className="agent-symbol">✦</span> {agentNames[eventActor(event) || 'main']}{' '}
+            <small>
+              {label}
+              {data.streaming ? <span className="streaming-tag"> · 正在回复</span> : ''}
+            </small>
+          </div>
+          <StreamingMarkdown
+            content={content}
+            streaming={data.streaming === true}
+            components={{
+              a: ({ href, title, children }) => (
+                <ProjectFileLink
+                  projectId={project.id}
+                  onOpen={onOpen}
+                  projectRoot={project.path}
+                  href={href}
+                  title={title}
+                >
+                  {children}
+                </ProjectFileLink>
+              ),
+            }}
+          />
+          {data.truncated === true && <small>输出较长，此处展示前 20,000 字符。</small>}
+          <MessageActions content={content} />
+        </article>
+      ) : null;
+    }
+    if (event.kind === 'tool_start' || event.kind === 'tool_end') {
+      const started = events.find(
+        (record) =>
+          record.kind === 'tool_start' &&
+          record.run_id === event.run_id &&
+          record.data.call_id === data.call_id &&
+          record.data.iteration === data.iteration &&
+          record.data.phase === data.phase,
+      );
+      const working =
+        event.kind === 'tool_start' && running && event.run_id === project.runs[0]?.id;
+      return (
+        <details className={`tool-activity ${data.is_error ? 'has-error' : ''}`} key={item.key}>
+          <summary>
+            {working ? (
+              <LoadingOutlined spin />
+            ) : data.is_error ? (
+              <span>!</span>
+            ) : (
+              <CheckOutlined />
+            )}
+            <span>{String(data.tool || '工具调用')}</span>
+            <small>
+              {event.kind === 'tool_end'
+                ? data.is_error
+                  ? '执行失败'
+                  : '执行完成'
+                : working
+                  ? '执行中'
+                  : '已记录调用'}
+            </small>
+          </summary>
+          <div className="tool-activity-body">
+            <p>
+              {agentNames[eventActor(event) || 'main']} · {label} · {round}
+            </p>
+            {data.arguments || started?.data.arguments ? (
+              <>
+                <strong>调用参数</strong>
+                <pre>{String(data.arguments || started?.data.arguments)}</pre>
+              </>
+            ) : null}
+            {data.output ? (
+              <>
+                <strong>工具输出</strong>
+                <pre>{visibleText(data.output)}</pre>
+              </>
+            ) : null}
+            {data.truncated === true && <small>输出已截取，完整产物可在工作区查看。</small>}
+          </div>
+        </details>
+      );
+    }
+    if (event.kind === 'node_end')
+      return (
+        <article key={item.key} className="chat-message agent-message">
+          <div className="message-role">
+            <span className="agent-symbol">✦</span> {agentNames[eventActor(event) || 'main']}{' '}
+            <small>{formatDate(event.created_at)}</small>
+          </div>
+          <p>
+            <strong>{label}</strong>阶段执行完成。
+          </p>
+          {visibleText(data.artifact) && (
+            <p className="stage-excerpt">{visibleText(data.artifact)}</p>
+          )}
+          {reports[String(data.node)] && (
+            <ChatArtifactCard
+              projectId={project.id}
+              path={reports[String(data.node)]}
+              title={label}
+              file={files.find((file) => file.path === reports[String(data.node)])}
+              onOpen={onOpen}
+            />
+          )}
+        </article>
+      );
+    if (event.kind === 'assignment_start' || event.kind === 'assignment_end') {
+      const assignment = data.assignment as Record<string, unknown> | undefined;
+      const role = event.kind === 'assignment_start' ? eventActor(event) : undefined;
+      return (
+        <div className="agent-handoff" key={item.key}>
+          <strong>
+            {event.kind === 'assignment_start'
+              ? `主控 → ${agentNames[role || 'main']}`
+              : '角色 → 主控 · 已交接'}
+          </strong>
+          <p>
+            {event.kind === 'assignment_start'
+              ? `${nodeLabel(assignment?.node)} · ${String(assignment?.instruction || '')}`
+              : statusLabels[String(data.status)] || String(data.status || '已交付')}
+          </p>
+        </div>
+      );
+    }
+    const labels: Record<string, string> = {
+      herdr_submitted: `${label} · 已交给 Herdr 执行`,
+      herdr_display_error: 'Herdr 状态显示异常，任务仍以执行回执为准',
+      node_start: `开始${label}`,
+      wiki_resumed: '已恢复 Wiki 来源、阅读进度和审阅记录',
+      context_compacting: '正在压缩上下文',
+      working_context_compacted: '上下文压缩完成，继续执行',
+      model_start: `${label} · 正在分析 ${round}`,
+      model_end: `${label} · 已完成本轮分析`,
+      node_progress: `${label} · ${String(data.stage || '更新进度')}`,
+      validation_failed: '产物校验需要修正',
+      model_error: '模型请求失败',
+      workflow_error: '研究执行失败',
+      run_finished: `本次运行${statusLabels[String(data.status)] || '已结束'}`,
+      stop_requested: '正在停止研究',
+    };
+    if (!labels[event.kind]) return null;
+    return (
+      <div key={item.key} className={`execution-step ${data.error ? 'has-error' : ''}`}>
+        <span className="step-dot" />
+        <div>
+          {agentNames[eventActor(event) || 'main']} · {labels[event.kind]}
+          {data.error ? <p>{String(data.error)}</p> : null}
+        </div>
+        <time>{formatDate(event.created_at)}</time>
+      </div>
+    );
+  };
+  const latestRun = project.runs[0]?.id;
+  // Process notes fold into one steps block; errors and run results stay visible.
+  const groupedKinds = new Set([
+    'tool_start',
+    'tool_end',
+    'assignment_start',
+    'assignment_end',
+    'herdr_submitted',
+    'herdr_display_error',
+    'node_start',
+    'wiki_resumed',
+    'context_compacting',
+    'working_context_compacted',
+    'node_progress',
+  ]);
+  function processStep(event: ActivityEvent): Step | null {
+    const data = event.data;
+    const label = nodeLabel(data.node || data.phase);
+    if (event.kind === 'tool_start' || event.kind === 'tool_end') {
+      const start =
+        event.kind === 'tool_end'
+          ? events.find(
+              (record) =>
+                record.kind === 'tool_start' &&
+                record.run_id === event.run_id &&
+                record.data.call_id === data.call_id &&
+                record.data.iteration === data.iteration &&
+                record.data.phase === data.phase,
+            )
+          : undefined;
+      const working = event.kind === 'tool_start' && running && event.run_id === latestRun;
+      const step = toolStep(event, start, working);
+      const args = data.arguments || start?.data.arguments;
+      if (args || data.output)
+        step.detail = (
+          <>
+            <p className="process-step-who">
+              {agentNames[eventActor(event) || 'main']} · {label}
+              {data.iteration ? ` · 第 ${data.iteration} 轮` : ''}
+            </p>
+            {args ? (
+              <>
+                <strong>调用参数</strong>
+                <pre>{String(args)}</pre>
+              </>
+            ) : null}
+            {data.output ? (
+              <>
+                <strong>工具输出</strong>
+                <pre>{visibleText(data.output)}</pre>
+              </>
+            ) : null}
+            {data.truncated === true && <small>输出已截取，完整产物可在工作区查看。</small>}
+          </>
+        );
+      return step;
+    }
+    const base = { key: `step-${event.id}`, status: 'done' as const, time: event.created_at };
+    if (event.kind === 'assignment_start') {
+      const assignment = data.assignment as Record<string, unknown> | undefined;
+      return {
+        ...base,
+        title: `派给${agentNames[eventActor(event) || 'main']}`,
+        hint: `${nodeLabel(assignment?.node)} · ${String(assignment?.instruction || '')}`,
+      };
+    }
+    if (event.kind === 'assignment_end')
+      return {
+        ...base,
+        title: '交回主控',
+        hint: statusLabels[String(data.status)] || String(data.status || '已交付'),
+      };
+    const titles: Record<string, string> = {
+      herdr_submitted: '交给 Herdr 执行',
+      herdr_display_error: 'Herdr 状态显示异常',
+      node_start: `开始${label}`,
+      wiki_resumed: '恢复 Wiki 阅读进度',
+      context_compacting: '压缩上下文',
+      working_context_compacted: '上下文压缩完成',
+      node_progress: `${label} · ${String(data.stage || '更新进度')}`,
+    };
+    return titles[event.kind] ? { ...base, title: titles[event.kind] } : null;
+  }
+  function renderTimeline() {
+    const blocks: ReactNode[] = [];
+    let group: ActivityEvent[] = [];
+    const flush = (trailing: boolean) => {
+      const steps = group.map(processStep).filter((step): step is Step => !!step);
+      if (steps.length)
+        blocks.push(
+          <ProcessGroup
+            key={`group-${group[0].id}`}
+            steps={steps}
+            live={trailing && running}
+            endedAt={group.at(-1)?.created_at}
+          />,
+        );
+      group = [];
+    };
+    for (const item of timeline) {
+      if (item.event && groupedKinds.has(item.event.kind)) {
+        group.push(item.event);
+        continue;
+      }
+      flush(false);
+      blocks.push(renderItem(item));
+    }
+    flush(true);
+    return blocks;
+  }
+  // While an agent works and no reply is streaming yet, say so instead of going quiet.
+  const tail = timeline.at(-1)?.event;
+  const streamingTail = tail?.kind === 'assistant_output' && tail.data.streaming === true;
+  const groupTail = !!tail && groupedKinds.has(tail.kind);
+  const actor = currentActor(project, events);
+  const lastModelStart = [...events].reverse().find((event) => event.kind === 'model_start');
+  const thinking =
+    running && !checkpoint && !streamingTail && !groupTail ? (
+      <ThinkingBubble
+        agent={agentNames[actor]}
+        activity={activityLabel(agentActivity(project, events, actor))}
+        since={lastModelStart?.created_at || tail?.created_at}
+      />
+    ) : null;
   return (
     <section className="conversation-panel" aria-label="研究对话">
       <div className="conversation-heading">
@@ -308,238 +667,8 @@ export function Conversation({
               </div>
             </article>
           )}
-          {timeline.map((item) => {
-            const event = item.event;
-            if (!event)
-              return (
-                <article key={item.key} className="chat-message user-message">
-                  <div className="message-role">
-                    你 · {item.label}
-                    <time>{formatDate(item.time)}</time>
-                  </div>
-                  <p>{item.text}</p>
-                  <MessageActions
-                    content={item.text}
-                    onReuse={
-                      !running && !pending && !checkpoint
-                        ? () => reuseInstruction(item.text)
-                        : undefined
-                    }
-                  />
-                </article>
-              );
-            const data = event.data;
-            if (event.kind === 'conversation_turn')
-              return (
-                <div key={item.key}>
-                  <article className="chat-message user-message">
-                    <div className="message-role">
-                      你<time>{formatDate(item.time)}</time>
-                    </div>
-                    <p>{String(data.prompt || '')}</p>
-                    <MessageActions
-                      content={String(data.prompt || '')}
-                      onReuse={
-                        !running && !pending && !checkpoint
-                          ? () => reuseInstruction(String(data.prompt || ''))
-                          : undefined
-                      }
-                    />
-                  </article>
-                  <article className="chat-message agent-message">
-                    <div className="message-role">
-                      <span className="agent-symbol">✦</span> BatteryScientist
-                    </div>
-                    <div className="chat-markdown">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ href, title, children }) => (
-                            <ProjectFileLink
-                              projectId={project.id}
-                              onOpen={onOpen}
-                              projectRoot={project.path}
-                              href={href}
-                              title={title}
-                            >
-                              {children}
-                            </ProjectFileLink>
-                          ),
-                        }}
-                      >
-                        {visibleText(data.reply)}
-                      </ReactMarkdown>
-                    </div>
-                    <MessageActions content={visibleText(data.reply)} />
-                  </article>
-                </div>
-              );
-            const label = nodeLabel(data.node || data.phase);
-            const round = data.iteration ? `第 ${data.iteration} 轮` : '';
-            if (event.kind === 'assistant_output') {
-              const content = visibleText(data.content);
-              return content ? (
-                <article key={item.key} className="chat-message agent-message">
-                  <div className="message-role">
-                    <span className="agent-symbol">✦</span>{' '}
-                    {agentNames[eventActor(event) || 'main']}{' '}
-                    <small>
-                      {label}
-                      {data.streaming ? ' · 回复生成中' : ''}
-                    </small>
-                  </div>
-                  <div className="chat-markdown">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({ href, title, children }) => (
-                          <ProjectFileLink
-                            projectId={project.id}
-                            onOpen={onOpen}
-                            projectRoot={project.path}
-                            href={href}
-                            title={title}
-                          >
-                            {children}
-                          </ProjectFileLink>
-                        ),
-                      }}
-                    >
-                      {content}
-                    </ReactMarkdown>
-                  </div>
-                  {data.truncated === true && <small>输出较长，此处展示前 20,000 字符。</small>}
-                  <MessageActions content={content} />
-                </article>
-              ) : null;
-            }
-            if (event.kind === 'tool_start' || event.kind === 'tool_end') {
-              const started = events.find(
-                (record) =>
-                  record.kind === 'tool_start' &&
-                  record.run_id === event.run_id &&
-                  record.data.call_id === data.call_id &&
-                  record.data.iteration === data.iteration &&
-                  record.data.phase === data.phase,
-              );
-              const working =
-                event.kind === 'tool_start' && running && event.run_id === project.runs[0]?.id;
-              return (
-                <details
-                  className={`tool-activity ${data.is_error ? 'has-error' : ''}`}
-                  key={item.key}
-                >
-                  <summary>
-                    {working ? (
-                      <LoadingOutlined spin />
-                    ) : data.is_error ? (
-                      <span>!</span>
-                    ) : (
-                      <CheckOutlined />
-                    )}
-                    <span>{String(data.tool || '工具调用')}</span>
-                    <small>
-                      {event.kind === 'tool_end'
-                        ? data.is_error
-                          ? '执行失败'
-                          : '执行完成'
-                        : working
-                          ? '执行中'
-                          : '已记录调用'}
-                    </small>
-                  </summary>
-                  <div className="tool-activity-body">
-                    <p>
-                      {agentNames[eventActor(event) || 'main']} · {label} · {round}
-                    </p>
-                    {data.arguments || started?.data.arguments ? (
-                      <>
-                        <strong>调用参数</strong>
-                        <pre>{String(data.arguments || started?.data.arguments)}</pre>
-                      </>
-                    ) : null}
-                    {data.output ? (
-                      <>
-                        <strong>工具输出</strong>
-                        <pre>{visibleText(data.output)}</pre>
-                      </>
-                    ) : null}
-                    {data.truncated === true && <small>输出已截取，完整产物可在工作区查看。</small>}
-                  </div>
-                </details>
-              );
-            }
-            if (event.kind === 'node_end')
-              return (
-                <article key={item.key} className="chat-message agent-message">
-                  <div className="message-role">
-                    <span className="agent-symbol">✦</span>{' '}
-                    {agentNames[eventActor(event) || 'main']}{' '}
-                    <small>{formatDate(event.created_at)}</small>
-                  </div>
-                  <p>
-                    <strong>{label}</strong>阶段执行完成。
-                  </p>
-                  {visibleText(data.artifact) && (
-                    <p className="stage-excerpt">{visibleText(data.artifact)}</p>
-                  )}
-                  {reports[String(data.node)] && (
-                    <ChatArtifactCard
-                      projectId={project.id}
-                      path={reports[String(data.node)]}
-                      title={label}
-                      file={files.find((file) => file.path === reports[String(data.node)])}
-                      onOpen={onOpen}
-                    />
-                  )}
-                </article>
-              );
-            if (event.kind === 'assignment_start' || event.kind === 'assignment_end') {
-              const assignment = data.assignment as Record<string, unknown> | undefined;
-              const role = event.kind === 'assignment_start' ? eventActor(event) : undefined;
-              return (
-                <div className="agent-handoff" key={item.key}>
-                  <strong>
-                    {event.kind === 'assignment_start'
-                      ? `主控 → ${agentNames[role || 'main']}`
-                      : '角色 → 主控 · 已交接'}
-                  </strong>
-                  <p>
-                    {event.kind === 'assignment_start'
-                      ? `${nodeLabel(assignment?.node)} · ${String(assignment?.instruction || '')}`
-                      : statusLabels[String(data.status)] || String(data.status || '已交付')}
-                  </p>
-                </div>
-              );
-            }
-            const labels: Record<string, string> = {
-              herdr_submitted: `${label} · 已交给 Herdr 执行`,
-              herdr_display_error: 'Herdr 状态显示异常，任务仍以执行回执为准',
-              node_start: `开始${label}`,
-              wiki_resumed: '已恢复 Wiki 来源、阅读进度和审阅记录',
-              context_compacting: '正在压缩上下文',
-              working_context_compacted: '上下文压缩完成，继续执行',
-              model_start: `${label} · 正在分析 ${round}`,
-              model_end: `${label} · 已完成本轮分析`,
-              node_progress: `${label} · ${String(data.stage || '更新进度')}`,
-              validation_failed: '产物校验需要修正',
-              model_error: '模型请求失败',
-              workflow_error: '研究执行失败',
-              run_finished: `本次运行${statusLabels[String(data.status)] || '已结束'}`,
-              stop_requested: '正在停止研究',
-            };
-            if (!labels[event.kind]) return null;
-            return (
-              <div key={item.key} className={`execution-step ${data.error ? 'has-error' : ''}`}>
-                <span className="step-dot" />
-                <div>
-                  {agentNames[eventActor(event) || 'main']} · {labels[event.kind]}
-                  {data.error ? <p>{String(data.error)}</p> : null}
-                </div>
-                <time>{formatDate(event.created_at)}</time>
-              </div>
-            );
-          })}
+          {renderTimeline()}
+          {thinking}
           {checkpoint && (
             <article className="chat-message agent-message checkpoint-message">
               <div className="message-role">
@@ -686,7 +815,7 @@ export function Conversation({
                 }
                 value={text}
                 onChange={(event) => setText(event.target.value)}
-                autoSize={{ minRows: 3, maxRows: 8 }}
+                autoSize={{ minRows: 2, maxRows: 8 }}
                 maxLength={20000}
                 disabled={pending}
                 onKeyDown={(event) => {

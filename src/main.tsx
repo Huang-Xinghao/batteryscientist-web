@@ -20,6 +20,7 @@ import './app/theme.css';
 import './app/effects.css';
 import './app/shell.css';
 import './features/workbench/workbench-fx.css';
+import './features/workbench/workbench-layout.css';
 const router = createBrowserRouter([{ path: '*', element: <App />, errorElement: <RouteError /> }]);
 const queryClient = new QueryClient({
   defaultOptions: {
