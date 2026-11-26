@@ -446,7 +446,8 @@ test('conversation replays execution output and opens artifacts in the workspace
   await page.locator('.tool-activity summary').click();
   await expect(page.getByText('已读取研究报告')).toBeVisible();
   await page.locator('.chat-artifact').click();
-  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  // The literature report opens as the research map rather than a text editor.
+  await expect(page.getByRole('region', { name: '文献研究图谱', exact: true })).toBeVisible();
   const separator = page.getByRole('separator', { name: '调整工作区宽度' });
   await separator.focus();
   await page.keyboard.press('ArrowLeft');
@@ -478,7 +479,7 @@ test('mobile conversation sends checkpoint feedback and opens the artifact works
   expect(typeof body?.checkpoint_token).toBe('string');
   await page.screenshot({ path: 'artifacts/conversation-workspace-mobile.png' });
   await page.locator('.chat-artifact').first().click();
-  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  await expect(page.getByRole('region', { name: '文献研究图谱', exact: true })).toBeVisible();
 });
 
 test('composer starts research and preserves its draft when submission fails', async ({ page }) => {

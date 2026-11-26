@@ -29,6 +29,7 @@ import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
 import { useActivity } from './useActivity';
 import { ProjectFileLink } from '../../shared/file-preview/ProjectFileLink';
+import { runIssue } from './runIssue';
 
 function visibleText(value: unknown) {
   return typeof value === 'string'
@@ -93,6 +94,7 @@ export function Conversation({
   const input = useRef<import('antd').InputRef>(null);
   const stick = useRef(true);
   const running = active(project.status);
+  const issue = runIssue(project);
   const checkpoint =
     project.status === 'awaiting_user' && project.state.mode === 'expert'
       ? project.state.expert_checkpoint
@@ -617,12 +619,12 @@ export function Conversation({
               <span>{checkpoint ? '正在提交回答…' : '正在理解你的请求…'}</span>
             </div>
           )}
-          {!running && (project.runs[0]?.error || project.state.error) && (
+          {!running && issue && (
             <Alert
-              type="error"
+              type={issue.type}
               showIcon
-              message="上次运行需要处理"
-              description={project.runs[0]?.error || project.state.error}
+              message={issue.message}
+              description={issue.description}
             />
           )}
           {(activityError || roleHistory.error) && (

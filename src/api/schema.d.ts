@@ -158,6 +158,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/idea-canvas/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive Review
+         * @description Set an unfinished proposal-review draft aside so the formal proposal can be approved.
+         *
+         *     The review page that edited these drafts is no longer shown, so a leftover draft would
+         *     otherwise block the checkpoint with no way forward. Files move to refine-logs/archive/.
+         */
+        post: operations["archive_review_api_projects__project_id__idea_canvas_archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/idea-canvas/apply": {
         parameters: {
             query?: never;
@@ -1080,6 +1103,22 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /**
+         * PendingReviewView
+         * @description An unfinished proposal-review draft that blocks approving the proposal.
+         */
+        PendingReviewView: {
+            /** Changes */
+            changes: number;
+            /** Editedsections */
+            editedSections: number;
+            /** Hasfeedback */
+            hasFeedback: boolean;
+            /** Hasrevision */
+            hasRevision: boolean;
+            /** Unreadable */
+            unreadable: boolean;
+        };
         /** Position */
         Position: {
             /** X */
@@ -1141,6 +1180,7 @@ export interface components {
             architecture: string;
             /** Output */
             output: string;
+            pendingReview?: components["schemas"]["PendingReviewView"] | null;
         };
         /** ProposalReview */
         ProposalReview: {
@@ -1179,6 +1219,11 @@ export interface components {
             live: boolean;
             /** Created At */
             created_at: string;
+        };
+        /** ReviewArchiveView */
+        ReviewArchiveView: {
+            /** Archived */
+            archived: string[];
         };
         /** ReviewImpactView */
         ReviewImpactView: {
@@ -1724,6 +1769,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProposalOverviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_review_api_projects__project_id__idea_canvas_archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewArchiveView"];
                 };
             };
             /** @description Validation Error */

@@ -222,6 +222,14 @@ export default function LiteratureJourney({
     });
   };
   const center = Math.max(papers.length - 1, searches.length - 1, 0) / 2;
+  const stages: Kind[] = [
+    'goal',
+    'scope',
+    ...(searches.length ? (['search'] as const) : []),
+    ...(papers.length ? (['paper', 'problem'] as const) : []),
+    'gap',
+  ];
+  const column = (kind: Kind) => stages.indexOf(kind);
   add(
     'goal',
     'goal',
@@ -237,7 +245,7 @@ export default function LiteratureJourney({
       action.id,
       'search',
       action.query || '检索词未记录',
-      2,
+      column('search'),
       index,
       `${action.status === 'done' ? '已完成' : action.status === 'error' ? '失败' : '暂无完成回执'} · ${action.candidates.length} 条已记录结果`,
     );
@@ -257,7 +265,7 @@ export default function LiteratureJourney({
       paper.id,
       'paper',
       paper.title,
-      3,
+      column('paper'),
       index,
       reads.length ? '已读取 Wiki · 报告选用' : '报告选用',
     );
@@ -274,7 +282,13 @@ export default function LiteratureJourney({
     );
     if (matches.length) matches.forEach((action) => link(action.id, paper.id, '检索命中'));
     else link('scope', paper.id, '报告选用', true);
-    add(`problem-${paper.id}`, 'problem', paper.problem || '报告尚未填写解决的问题', 4, index);
+    add(
+      `problem-${paper.id}`,
+      'problem',
+      paper.problem || '报告尚未填写解决的问题',
+      column('problem'),
+      index,
+    );
     link(paper.id, `problem-${paper.id}`, '解决');
   });
   relations.forEach((relation, index) => {
@@ -302,7 +316,7 @@ export default function LiteratureJourney({
       gap.id,
       'gap',
       gap.text || '报告尚未填写 Gap',
-      5,
+      column('gap'),
       center + index,
       evidence.length ? `${evidence.length} 篇文献被明确提及` : '报告未明确关联具体论文',
     );
@@ -310,7 +324,7 @@ export default function LiteratureJourney({
     else link('scope', gap.id, '报告综合判断', true);
   });
   if (!gaps.length) {
-    add('gap-pending', 'gap', '等待 Agent 形成 Gap 判断', 5, center);
+    add('gap-pending', 'gap', '等待 Agent 形成 Gap 判断', column('gap'), center);
     link('scope', 'gap-pending', '待归纳', true);
   }
   const detail = nodes.find((node) => node.id === selected);
@@ -354,6 +368,7 @@ export default function LiteratureJourney({
           nodesDraggable={false}
           nodesConnectable={false}
           edgesFocusable={false}
+          colorMode="dark"
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           minZoom={0.03}
         >
