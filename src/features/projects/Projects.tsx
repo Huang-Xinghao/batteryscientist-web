@@ -188,34 +188,6 @@ export function Projects() {
           </div>
         </div>
       </section>
-      {all.some((p) => p.status === 'awaiting_user') && (
-        <section className="todo-list" aria-labelledby="todo-title">
-          <h2 id="todo-title">等你处理</h2>
-          {all
-            .filter((p) => p.status === 'awaiting_user')
-            .map((p) => {
-              const node = p.state.expert_checkpoint?.node || p.state.current_node || '';
-              return (
-                <Link key={p.id} to={`/projects/${p.id}`} className="todo-item spotlight fx-pop">
-                  <span className="todo-dot fx-ping" />
-                  <span className="todo-text">
-                    <strong>
-                      {p.name} 的{labels[node] || '当前阶段'}等你审阅
-                    </strong>
-                    <small>
-                      {p.pending_questions?.length
-                        ? `有 ${p.pending_questions.length} 个问题待回答`
-                        : '查看产物后批准或提出修改'}
-                    </small>
-                  </span>
-                  <span className="todo-go">
-                    去审阅 <ArrowRightOutlined />
-                  </span>
-                </Link>
-              );
-            })}
-        </section>
-      )}
       <div className="overview-strip">
         {[
           ['全部项目', all.length, '持续积累研究成果'],

@@ -9,7 +9,6 @@ export const roles = [
   'wiki_agent',
 ] as const;
 export type AgentRole = (typeof roles)[number];
-export type AgentFilter = AgentRole | 'all' | 'follow';
 export const agentNames: Record<AgentRole, string> = {
   main: '主控 Agent',
   idea_generator: '构思 Agent',
@@ -90,8 +89,7 @@ export function currentActor(project: Project, events: ActivityEvent[]): AgentRo
   return isRole(snapshot?.role) ? snapshot.role : 'main';
 }
 
-export function visibleAgent(project: Project, events: ActivityEvent[], selected: AgentFilter) {
-  if (selected !== 'follow') return selected;
+export function visibleAgent(project: Project, events: ActivityEvent[]) {
   return ['queued', 'running', 'stopping', 'external_running'].includes(project.status)
     ? currentActor(project, events)
     : 'all';

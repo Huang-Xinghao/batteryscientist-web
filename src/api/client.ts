@@ -109,7 +109,7 @@ export const api = {
     `/api/projects/${id}/download?${new URLSearchParams({ path })}`,
 };
 export const active = (status: string) =>
-  ['queued', 'running', 'stopping', 'external_running'].includes(status);
+  ['queued', 'running', 'stopping', 'external_running', 'awaiting_answer'].includes(status);
 export const statusLabels: Record<string, string> = {
   external_running: '终端运行中',
   idle: '尚未启动',
@@ -118,6 +118,7 @@ export const statusLabels: Record<string, string> = {
   stopping: '正在停止',
   interrupted: '已中断',
   awaiting_user: '等待审阅',
+  awaiting_answer: '等待回答',
   awaiting_results: '等待实验结果',
   completed: '已完成',
   failed: '运行失败',

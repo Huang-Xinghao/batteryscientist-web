@@ -24,7 +24,7 @@ test('task question survives refresh and answers the original task while preserv
       response,
       json: {
         ...project,
-        status: 'running',
+        status: answered ? 'running' : 'awaiting_answer',
         pending_questions: answered ? [] : [question],
       },
     });
@@ -42,6 +42,8 @@ test('task question survives refresh and answers the original task while preserv
   await page.goto('/');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   await expect(page.getByRole('article', { name: '任务提问' })).toBeVisible();
+  await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('等待你的回答');
+  await expect(page.getByRole('button', { name: '停止运行', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText(question.question)).toBeVisible();
   await page.getByRole('button', { name: '方案 B', exact: true }).click();

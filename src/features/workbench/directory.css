@@ -25,7 +25,6 @@
   font-size: 11px;
 }
 .directory-group,
-.directory-folder,
 .directory-file {
   display: inline-flex;
   align-items: center;
@@ -46,10 +45,6 @@
   padding: 0 5px;
   font-size: 10px;
   line-height: 18px;
-}
-.directory-folder {
-  color: var(--muted);
-  font-size: 12px;
 }
 .directory-file {
   color: var(--ink-2);

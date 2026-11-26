@@ -348,6 +348,33 @@
   min-height: 32px;
   box-shadow: none;
 }
+.conversation-panel .composer-tools .composer-stop {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  margin-left: auto;
+  margin-right: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: none;
+}
+.conversation-panel .composer-tools .composer-stop:hover:not(:disabled) {
+  color: #ff9a9e;
+  background: #ff6b7a14;
+  border-color: #ff6b7a66;
+}
+.conversation-panel .composer-tools .composer-stop:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.composer-stop-icon {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: currentColor;
+}
 .conversation-panel .composer-hint {
   color: var(--muted);
   font-size: 10px;

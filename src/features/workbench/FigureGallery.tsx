@@ -4,13 +4,14 @@ import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/ic
 import { api, type ProjectFile } from '../../api/client';
 import { formatArtifactSize, isImagePath } from '../../shared/file-preview/display';
 import './gallery.css';
+import { artifactStage, artifactStages } from './artifactStages';
 
 function FigureCard({ projectId, file }: { projectId: string; file: ProjectFile }) {
   const [dimensions, setDimensions] = useState('');
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const name = file.path.split('/').pop()!;
-  const folder = file.path.slice(0, Math.max(0, file.path.lastIndexOf('/')));
+  const stage = artifactStages.find((entry) => entry.id === artifactStage(file.path))?.label || '';
   const url = `${api.download(projectId, file.path)}&v=${file.modified}&retry=${attempt}`;
   return (
     <figure className="research-figure">
@@ -58,9 +59,7 @@ function FigureCard({ projectId, file }: { projectId: string; file: ProjectFile 
             />
           </Tooltip>
         </div>
-        <div className="figure-directory" title={folder}>
-          {folder || '项目根目录'}
-        </div>
+        <div className="figure-directory">{stage}</div>
         <div className="figure-metadata">
           <span>{formatArtifactSize(file.size)}</span>
           <span>{dimensions}</span>
@@ -76,7 +75,11 @@ export function FigureGallery({ projectId, files }: { projectId: string; files: 
   const [sort, setSort] = useState('path');
   const images = files.filter((file) => isImagePath(file.path));
   const visible = images
-    .filter((file) => file.path.toLowerCase().includes(query.toLowerCase()))
+    .filter((file) =>
+      `${file.path} ${artifactStages.find((entry) => entry.id === artifactStage(file.path))?.label || ''}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+    )
     .sort((a, b) =>
       sort === 'modified'
         ? b.modified - a.modified
@@ -94,7 +97,7 @@ export function FigureGallery({ projectId, files }: { projectId: string; files: 
         </div>
         <Input
           aria-label="筛选研究图片"
-          placeholder="搜索图片名称或目录"
+          placeholder="搜索图片名称或研究阶段"
           prefix={<SearchOutlined />}
           value={query}
           onChange={(event) => setQuery(event.target.value)}

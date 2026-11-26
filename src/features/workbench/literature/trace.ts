@@ -3,9 +3,6 @@ import type { ActivityEvent } from '../../../api/client';
 export interface ResearchContext {
   goal: string;
   events: ActivityEvent[];
-  hasOlder: boolean;
-  loadingOlder: boolean;
-  loadOlder: () => void;
   error: string;
 }
 

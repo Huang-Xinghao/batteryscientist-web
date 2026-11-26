@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { active, type NodeInfo, type Project } from '../../api/client';
+import type { NodeInfo, Project } from '../../api/client';
+import { Link } from 'react-router-dom';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { stageStatuses, type StageStatus } from './stageStatus';
 import { burstFrom } from '../../components/fx/burst';
 import './charge-track.css';
-
-export type StageStatus = 'done' | 'running' | 'review' | 'stopped' | 'failed' | 'pending';
 
 const statusText: Record<StageStatus, string> = {
   done: '已完成',
@@ -23,27 +24,6 @@ const groups = [
     nodes: ['paper_plan', 'paper_figure', 'paper_write', 'paper_compile', 'improvement'],
   },
 ];
-
-function stageStatuses(project: Project, nodes: NodeInfo[]) {
-  const done = new Set(project.state.history?.map((entry) => entry.node));
-  const current = String(project.progress?.current_node || project.state.current_node || '');
-  const running = active(project.status);
-  const checkpointNode =
-    project.status === 'awaiting_user' ? project.state.expert_checkpoint?.node : undefined;
-  const result: Record<string, StageStatus> = {};
-  for (const node of nodes) {
-    let status: StageStatus = done.has(node.id) ? 'done' : 'pending';
-    if (node.id === checkpointNode) status = 'review';
-    else if (node.id === current) {
-      if (running) status = 'running';
-      else if (project.status === 'failed') status = 'failed';
-      else if (project.status === 'interrupted') status = 'stopped';
-      else if (project.status === 'awaiting_user') status = 'review';
-    }
-    result[node.id] = status;
-  }
-  return result;
-}
 
 /**
  * The research pipeline drawn as a segmented battery cell: finished stages charge
@@ -89,6 +69,9 @@ export function ChargeTrack({
   return (
     <section className={`charge-track ${collapsed ? 'is-collapsed' : ''}`} aria-label="研究进度">
       <div className="charge-track-heading">
+        <Link to="/" className="back-link" aria-label="返回研究项目" title="返回研究项目">
+          <ArrowLeftOutlined />
+        </Link>
         <h2>研究进度</h2>
         <p>
           已完成 <strong>{doneCount}</strong> / {nodes.length}，{summary}

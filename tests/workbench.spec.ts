@@ -276,6 +276,7 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   await expect(page.getByRole('tab', { name: '文件', exact: true })).toBeHidden();
   await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
   await expect(page.getByText('LaTeX 论文工作区', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.latex-artifact .artifact-toolbar')).toHaveCount(0);
   await expect(page.getByText('编辑', { exact: true })).toHaveCount(0);
   const surface = await page.locator('.latex-source .monaco-editor').boundingBox();
   expect(surface!.height).toBeGreaterThan(500);
@@ -286,7 +287,7 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText('\n% Browser edit');
-  await page.getByRole('button', { name: /保\s*存/ }).click();
+  await page.keyboard.press('ControlOrMeta+s');
   await expect(page.getByText('文件已保存')).toBeVisible();
   await expect(page.getByText('待编译', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'artifacts/latex-workspace.png', fullPage: true });
@@ -738,3 +739,45 @@ for (const width of [1512, 390]) {
     await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
   });
 }
+
+test('Enter sends, Shift+Enter inserts a newline, and IME confirmation does not send', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '新建研究项目' }).click();
+  await page.getByLabel('项目名称').fill('回车发送测试');
+  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  const sent: string[] = [];
+  await page.route('**/api/projects/*/messages', async (route) => {
+    sent.push(route.request().postDataJSON().prompt);
+    await route.fulfill({ status: 202, json: { id: 'keyboard-run' } });
+  });
+  const input = page.getByRole('textbox', { name: '研究指令', exact: true });
+  await input.fill('第一行');
+  await input.press('Shift+Enter');
+  await input.press('End');
+  await input.press('a');
+  await expect(input).toHaveValue('第一行\na');
+  expect(sent).toEqual([]);
+  await input.dispatchEvent('keydown', {
+    key: 'Enter',
+    code: 'Enter',
+    isComposing: true,
+    bubbles: true,
+  });
+  expect(sent).toEqual([]);
+  await input.dispatchEvent('keydown', {
+    key: 'Enter',
+    code: 'Enter',
+    keyCode: 229,
+    bubbles: true,
+  });
+  expect(sent).toEqual([]);
+  await input.press('Enter');
+  await expect(input).toHaveValue('');
+  expect(sent).toEqual(['第一行\na']);
+  await input.fill('兼容原快捷键');
+  await input.press('ControlOrMeta+Enter');
+  await expect(input).toHaveValue('');
+  expect(sent).toEqual(['第一行\na', '兼容原快捷键']);
+});

@@ -8,6 +8,7 @@ export function Status({ value }: { value: string }) {
       completed: 'success',
       failed: 'error',
       awaiting_user: 'warning',
+      awaiting_answer: 'warning',
       stopping: 'warning',
     } as Record<string, string>
   )[value];

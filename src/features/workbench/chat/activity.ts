@@ -9,11 +9,28 @@ function responseKey(event: ActivityEvent) {
 // a reset discards partial text from an abandoned request attempt.
 export function conversationEvents(events: ActivityEvent[]): ActivityEvent[] {
   const finished = new Set(events.filter((e) => e.kind === 'assistant_output').map(responseKey));
+  // A coordinator receipt is an assistant result, never a user prompt. Usually
+  // its text is already present in the streamed response; retain a fallback for
+  // histories where that response is not loaded.
+  const replies = new Set(
+    events
+      .filter((event) => event.kind === 'assistant_output' && event.data.phase === 'coordinator')
+      .map((event) => JSON.stringify([event.run_id, String(event.data.content || '').trim()])),
+  );
   const streams = new Map<string, ActivityEvent>();
   const result: ActivityEvent[] = [];
   for (const event of events) {
     const key = responseKey(event);
-    if (event.kind === 'assistant_stream_start') {
+    if (event.kind === 'conversation_turn' && event.data.intent === 'coordinator_result') {
+      const content = String(event.data.reply || '').trim();
+      if (content && !replies.has(JSON.stringify([event.run_id, content]))) {
+        result.push({
+          ...event,
+          kind: 'assistant_output',
+          data: { role: 'main', phase: 'coordinator', content },
+        });
+      }
+    } else if (event.kind === 'assistant_stream_start') {
       streams.delete(key);
     } else if (event.kind === 'assistant_delta') {
       if (finished.has(key) || typeof event.data.content !== 'string') continue;

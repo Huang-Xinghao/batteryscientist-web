@@ -106,17 +106,79 @@ export function reportSections(content: string): ReportSection[] {
 }
 
 export function gapEvidence(section: ReportSection, papers: LiteraturePaper[]): string[] {
-  const value = section.text.toLocaleLowerCase();
-  return papers
-    .filter((paper) => {
-      // Only explicit identifiers, source links or named titles establish evidence edges.
-      const title = paper.title.replace(/[,，(（]\s*(?:19|20)\d{2}.*$/, '').trim();
-      const alias = paper.title.match(/^(P\d+|L\d+)\b/i)?.[1];
-      return (
-        (title.length >= 5 && value.includes(title.toLocaleLowerCase())) ||
-        paper.sources.some((source) => section.markdown.includes(source)) ||
-        (!!alias && new RegExp(`\\b${alias}\\b`, 'i').test(section.text))
-      );
-    })
-    .map((paper) => paper.id);
+  return mentionedPapers(section.text, section.markdown, papers).map((paper) => paper.id);
+}
+
+function mentionedPapers(value: string, markdown: string, papers: LiteraturePaper[]) {
+  value = value.toLocaleLowerCase();
+  return papers.filter((paper) => {
+    // Only explicit identifiers, source links or named titles establish evidence edges.
+    const title = paper.title.replace(/[,，(（]\s*(?:19|20)\d{2}.*$/, '').trim();
+    const alias = paper.title.match(/^([A-Z]{1,3}\d+)\b/i)?.[1];
+    return (
+      (title.length >= 5 && value.includes(title.toLocaleLowerCase())) ||
+      paper.sources.some((source) => markdown.includes(source)) ||
+      (!!alias && new RegExp(`\\b${alias}\\b`, 'i').test(value))
+    );
+  });
+}
+
+export interface PaperRelation {
+  id: string;
+  source: string;
+  target: string;
+  evidence: { label: string; section: string; markdown: string }[];
+}
+
+/** Use explicitly grouped comparisons in the existing report, never similarity guesses. */
+export function paperRelations(content: string, papers: LiteraturePaper[]): PaperRelation[] {
+  const blocks = unified().use(remarkParse).use(remarkGfm).parse(content).children;
+  const relations = new Map<string, PaperRelation>();
+  const headings = new Map<number, string>();
+  const add = (block: MarkdownNode, label: string, section: string) => {
+    const markdown = content.slice(block.position?.start.offset, block.position?.end.offset);
+    const mentions = mentionedPapers(text(block), markdown, papers);
+    for (let i = 0; i < mentions.length; i++) {
+      for (const target of mentions.slice(i + 1)) {
+        const source = mentions[i];
+        const id = `relation:${source.id}:${target.id}`;
+        const relation = relations.get(id) || {
+          id,
+          source: source.id,
+          target: target.id,
+          evidence: [],
+        };
+        if (!relation.evidence.some((entry) => entry.markdown === markdown)) {
+          relation.evidence.push({ label, section, markdown });
+        }
+        relations.set(id, relation);
+      }
+    }
+  };
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      for (const depth of headings.keys()) if (depth >= block.depth!) headings.delete(depth);
+      headings.set(block.depth!, text(block));
+      continue;
+    }
+    const section = [...headings.values()].join(' / ');
+    // Scope narrowly: a shared citation in a gap, risk list or bibliography
+    // does not by itself establish a paper-to-paper relationship.
+    if (
+      !/领域图谱|文献关系|论文关系|方法谱系|关系分析|方法对比|paper relationships|method comparisons/i.test(
+        section,
+      )
+    )
+      continue;
+    if (block.type === 'list') {
+      for (const item of block.children || []) {
+        const paragraph = item.children?.find((child) => child.type === 'paragraph');
+        const label = paragraph?.children?.find((child) => child.type === 'strong');
+        if (label) add(item, text(label).replace(/[：:]$/, ''), section);
+      }
+    } else if (block.type === 'paragraph') {
+      add(block, headings.get(3) || headings.get(2) || '报告对比', section);
+    }
+  }
+  return [...relations.values()];
 }

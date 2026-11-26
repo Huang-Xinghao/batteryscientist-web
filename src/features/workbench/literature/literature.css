@@ -27,8 +27,8 @@
   min-height: 300px;
 }
 .research-map-card {
-  width: 300px;
-  height: 145px;
+  width: 320px;
+  height: 170px;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -38,12 +38,12 @@
 }
 .research-map-card small {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin-bottom: 10px;
 }
 .research-map-card strong {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -52,7 +52,7 @@
 }
 .research-map-card > span {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 8px;
 }
@@ -75,6 +75,24 @@
 .research-map {
   position: relative;
   overflow: hidden;
+}
+.research-map-views {
+  display: flex;
+  gap: 8px;
+}
+.literature-toolbar > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.paper-relation-link {
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  white-space: normal;
+  text-align: left;
+}
+.paper-relation {
+  cursor: pointer;
 }
 .literature-toolbar,
 .literature-caption {

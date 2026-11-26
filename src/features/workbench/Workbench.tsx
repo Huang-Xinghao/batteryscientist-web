@@ -1,21 +1,15 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Drawer, Dropdown, Empty, Skeleton, Space, Tabs, Tooltip } from 'antd';
+import { Alert, App, Button, Dropdown, Skeleton, Space, Tabs, Tooltip } from 'antd';
 import {
-  ArrowLeftOutlined,
-  ClockCircleOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
   MessageOutlined,
-  PlayCircleOutlined,
-  ReloadOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { active, api, type NodeInfo, type RunInput, type UserQuestion } from '../../api/client';
-import { Status } from '../../components/Status';
 import { Artifact } from './Artifact';
 import { ChargeTrack } from './ChargeTrack';
 import { ArtifactDirectory } from './ArtifactDirectory';
@@ -23,6 +17,7 @@ import { Conversation } from './Conversation';
 import { FigureGallery } from './FigureGallery';
 import { RunDialog } from './RunDialog';
 import { reports } from './stages';
+import { stageArtifacts, artifactStage } from './artifactStages';
 import { useActivity } from './useActivity';
 
 export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
@@ -52,13 +47,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     queryKey: ['files', id],
     queryFn: () => api.files(id),
     refetchInterval: live ? 60000 : 10000,
-  });
-  const [activityOpen, setActivityOpen] = useState(false);
-  const logs = useQuery({
-    queryKey: ['log', id],
-    queryFn: () => api.log(id),
-    enabled: activityOpen,
-    refetchInterval: activityOpen ? 3000 : false,
   });
   const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
   const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
@@ -138,7 +126,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     else open();
   }
   function pickStage(node: string) {
-    const path = reports[node];
+    const path = node === 'paper_write' ? 'paper/main.pdf' : reports[node];
     if (node === 'literature' || files.data?.files.some((entry) => entry.path === path)) {
       openFile(path, node);
       return;
@@ -168,6 +156,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const running = active(p.status);
   const checkpoint = p.status === 'awaiting_user' ? p.state.expert_checkpoint : undefined;
   const fileList = files.data?.files || [];
+  const deliverables = stageArtifacts(fileList);
   const currentNode =
     selectedNode ||
     (p.runs[0]?.options.action === 'revise' ? String(p.progress.current_node || '') : '') ||
@@ -182,17 +171,18 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     completedNodes.has('refine') &&
     !completedNodes.has('paper_write') &&
     fileList.some((entry) => entry.path === reports.refine);
-  const defaultFile =
+  const stageFile =
     checkpoint?.node === currentNode
       ? checkpoint.report
       : showAutoProposal
         ? reports.refine
         : reports[currentNode];
+  const defaultFile = stageFile === 'paper/main.tex' ? 'paper/main.pdf' : stageFile;
   const file =
     selectedFile ||
     (defaultFile === reports.literature || fileList.some((entry) => entry.path === defaultFile)
       ? defaultFile
-      : '');
+      : deliverables.find((entry) => artifactStage(entry.path) === currentNode)?.path || '');
   const latexOpen = /\.tex$/i.test(file) && tab === 'report';
   const paperFocus = tab === 'report' && (latexOpen || /^paper\/.*\.pdf$/i.test(file));
   const proposalFocus = file === reports.refine;
@@ -235,65 +225,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   }
   return (
     <div className="workbench-page">
-      <header className="workbench-heading">
-        <div className="project-identity">
-          <Link to="/" className="back-link" aria-label="返回研究项目" title="返回研究项目">
-            <ArrowLeftOutlined />
-          </Link>
-          <h1 title={p.name}>{p.name}</h1>
-          <Status value={p.status} />
-          <Tooltip title={p.path}>
-            <span className="project-path" tabIndex={0} aria-label={`项目路径：${p.path}`}>
-              <FolderOpenOutlined />
-            </span>
-          </Tooltip>
-        </div>
-        <Space size={6}>
-          {fileList.some((entry) => entry.path === reports.refine) && (
-            <Button
-              size="small"
-              onClick={() => {
-                if (dirtyRef.current) {
-                  message.info('请先保存或撤销当前修改，再查看方案');
-                  return;
-                }
-                openFile(reports.refine, 'refine');
-                setReviewRequest((value) => value + 1);
-              }}
-            >
-              查看方案
-            </Button>
-          )}
-          <Button size="small" icon={<ClockCircleOutlined />} onClick={() => setActivityOpen(true)}>
-            运行动态
-          </Button>
-          <Button
-            size="small"
-            aria-label="刷新"
-            icon={<ReloadOutlined />}
-            onClick={() => {
-              project.refetch();
-              files.refetch();
-            }}
-          />
-          {running ? (
-            <Button
-              size="small"
-              danger
-              icon={<StopOutlined />}
-              disabled={p.status === 'external_running'}
-              loading={stop.isPending || p.status === 'stopping'}
-              onClick={stopRun}
-            >
-              {p.status === 'external_running' ? '终端运行中' : '停止运行'}
-            </Button>
-          ) : checkpoint ? null : (
-            <Button size="small" icon={<PlayCircleOutlined />} onClick={() => setRunOpen(true)}>
-              {p.state.project_goal ? '继续研究' : '启动研究'}
-            </Button>
-          )}
-        </Space>
-      </header>
       <ChargeTrack
         project={p}
         nodes={nodes}
@@ -409,7 +340,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             <div>
               <FolderOpenOutlined />
               <h2>{proposalFocus ? '研究方案' : '工作区'}</h2>
-              <span className="workspace-file-count">{fileList.length} 个文件</span>
+              <span className="workspace-file-count">{deliverables.length} 个产物</span>
             </div>
             <Space size={4}>
               <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
@@ -452,7 +383,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                         </Dropdown>
                       )}
                       <ArtifactDirectory
-                        files={fileList}
+                        files={deliverables}
                         value={file}
                         onChange={(path) => openFile(path)}
                         truncated={files.data?.truncated}
@@ -467,16 +398,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                           onClick={() => setMaximized(!maximized)}
                         />
                       )}
-                      {file !== 'paper/main.tex' &&
-                        fileList.some((entry) => entry.path === 'paper/main.tex') && (
-                          <Button
-                            size="small"
-                            className="paper-editor-shortcut"
-                            onClick={() => openFile('paper/main.tex')}
-                          >
-                            论文编辑器
-                          </Button>
-                        )}
                     </div>
                     {files.isError && (
                       <Alert
@@ -494,12 +415,10 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                       reviewRequest={reviewRequest}
                       collaborationMode={p.state.mode === 'auto' ? 'auto' : 'expert'}
                       projectId={id}
+                      onOpen={openFile}
                       research={{
                         goal: p.state.project_goal || '',
                         events: activity.events,
-                        hasOlder: activity.hasOlder,
-                        loadingOlder: activity.loadingOlder,
-                        loadOlder: () => void activity.loadOlder(),
                         error: activity.error,
                       }}
                       path={file}
@@ -521,7 +440,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
               {
                 key: 'figures',
                 label: '图片',
-                children: <FigureGallery projectId={id} files={fileList} />,
+                children: <FigureGallery projectId={id} files={deliverables} />,
               },
             ]}
           />
@@ -538,33 +457,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
           </footer>
         </section>
       </div>
-      <Drawer
-        title="运行动态"
-        open={activityOpen}
-        onClose={() => setActivityOpen(false)}
-        width={520}
-        className="workbench-drawer"
-      >
-        <p className="muted">执行事件展示在研究对话中；这里保留原始运行日志。</p>
-        {(p.runs[0]?.error || p.state.error) && (
-          <Alert
-            type="error"
-            message="上次运行需要处理"
-            description={p.runs[0]?.error || p.state.error}
-          />
-        )}
-        {logs.isError ? (
-          <Alert
-            type="error"
-            message={logs.error.message}
-            action={<Button onClick={() => logs.refetch()}>重试</Button>}
-          />
-        ) : logs.data?.content ? (
-          <pre className="live-log">{logs.data.content}</pre>
-        ) : (
-          <Empty description="暂无本工作台的运行日志" />
-        )}
-      </Drawer>
       <RunDialog
         mode={mode}
         onModeChange={setMode}

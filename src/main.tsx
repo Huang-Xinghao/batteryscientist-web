@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp, ConfigProvider, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { App } from './app/App';
+import { RouteError } from './app/RouteError';
 import { AuthGate } from './features/auth/AuthGate';
 import 'antd/dist/reset.css';
 import '@fontsource/ibm-plex-sans/400.css';
@@ -19,7 +20,7 @@ import './app/theme.css';
 import './app/effects.css';
 import './app/shell.css';
 import './features/workbench/workbench-fx.css';
-const router = createBrowserRouter([{ path: '*', element: <App /> }]);
+const router = createBrowserRouter([{ path: '*', element: <App />, errorElement: <RouteError /> }]);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 3000, refetchOnWindowFocus: true },

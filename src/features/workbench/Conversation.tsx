@@ -6,7 +6,6 @@ import {
   CheckOutlined,
   LoadingOutlined,
   SettingOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -23,12 +22,13 @@ import { formatDate } from '../../lib/date';
 import { reports } from './stages';
 import { TaskQuestion } from './TaskQuestion';
 import { AgentStatus } from './AgentStatus';
-import { agentNames, visibleAgent, eventActor, eventMatches, type AgentFilter } from './agents';
+import { agentNames, visibleAgent, eventActor, eventMatches } from './agents';
 import { conversationEvents } from './chat/activity';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
 import './chat/conversation.css';
 import { useActivity } from './useActivity';
+import { ProjectFileLink } from '../../shared/file-preview/ProjectFileLink';
 
 function visibleText(value: unknown) {
   return typeof value === 'string'
@@ -82,8 +82,7 @@ export function Conversation({
     values: [],
   });
   const [atBottom, setAtBottom] = useState(true);
-  const [agentFilter, setAgentFilter] = useState<AgentFilter>('follow');
-  const visibleRole = visibleAgent(project, events, agentFilter);
+  const visibleRole = visibleAgent(project, events);
   const roleHistory = useActivity(project.id, visibleRole, visibleRole !== 'all');
   // Keep the global stream for actor tracking; page each role's history independently.
   const historyEvents = visibleRole === 'all' ? events : roleHistory.events;
@@ -234,13 +233,7 @@ export function Conversation({
           </small>
         </Tooltip>
       </div>
-      <AgentStatus
-        project={project}
-        events={events}
-        nodes={nodes}
-        selected={agentFilter}
-        onSelect={setAgentFilter}
-      />
+      <AgentStatus project={project} events={events} />
       <div
         className="conversation-scroll"
         ref={scroller}
@@ -356,7 +349,22 @@ export function Conversation({
                       <span className="agent-symbol">✦</span> BatteryScientist
                     </div>
                     <div className="chat-markdown">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          a: ({ href, title, children }) => (
+                            <ProjectFileLink
+                              projectId={project.id}
+                              onOpen={onOpen}
+                              projectRoot={project.path}
+                              href={href}
+                              title={title}
+                            >
+                              {children}
+                            </ProjectFileLink>
+                          ),
+                        }}
+                      >
                         {visibleText(data.reply)}
                       </ReactMarkdown>
                     </div>
@@ -379,7 +387,24 @@ export function Conversation({
                     </small>
                   </div>
                   <div className="chat-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, title, children }) => (
+                          <ProjectFileLink
+                            projectId={project.id}
+                            onOpen={onOpen}
+                            projectRoot={project.path}
+                            href={href}
+                            title={title}
+                          >
+                            {children}
+                          </ProjectFileLink>
+                        ),
+                      }}
+                    >
+                      {content}
+                    </ReactMarkdown>
                   </div>
                   {data.truncated === true && <small>输出较长，此处展示前 20,000 字符。</small>}
                   <MessageActions content={content} />
@@ -586,17 +611,6 @@ export function Conversation({
               onAnswer={onAnswer}
             />
           ))}
-          {running && (
-            <div className="agent-working">
-              <LoadingOutlined spin />
-              <span>
-                {project.pending_questions?.length
-                  ? '等待你的回答'
-                  : nodeLabel(project.state.current_node)}{' '}
-                · {String(project.progress.tool || project.progress.phase || '研究执行中')}
-              </span>
-            </div>
-          )}
           {pending && !running && (
             <div className="agent-working">
               <LoadingOutlined spin />
@@ -674,7 +688,12 @@ export function Conversation({
                 maxLength={20000}
                 disabled={pending}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  if (
+                    event.key === 'Enter' &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing &&
+                    event.nativeEvent.keyCode !== 229
+                  ) {
                     event.preventDefault();
                     void send();
                   }
@@ -707,15 +726,18 @@ export function Conversation({
                   </Tooltip>
                 </div>
                 {running && (
-                  <Button
-                    size="small"
-                    danger
-                    icon={<StopOutlined />}
-                    disabled={project.status === 'external_running'}
-                    onClick={onStop}
-                  >
-                    停止运行
-                  </Button>
+                  <Tooltip title={project.status === 'stopping' ? '正在停止' : '停止运行'}>
+                    <Button
+                      className="composer-stop"
+                      type="text"
+                      shape="circle"
+                      aria-label="停止运行"
+                      icon={<span className="composer-stop-icon" aria-hidden="true" />}
+                      loading={project.status === 'stopping'}
+                      disabled={['external_running', 'stopping'].includes(project.status)}
+                      onClick={onStop}
+                    />
+                  </Tooltip>
                 )}
                 {
                   <Button
@@ -746,7 +768,7 @@ export function Conversation({
                   : '任务在后台持续运行，关闭页面后仍会继续。'
                 : checkpoint
                   ? '审阅右侧产物后提交反馈，或留空确认并继续。'
-                  : 'Ctrl / ⌘ + Enter 发送 · 研究会调用模型与工具'}
+                  : 'Enter 发送 · Shift + Enter 换行 · 研究会调用模型与工具'}
             </p>
           </>
         )}
