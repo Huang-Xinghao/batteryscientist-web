@@ -100,39 +100,39 @@ function ChargeOverlay({
   return (
     <div
       ref={root}
-      className={`charge-overlay is-${phase}`}
+      className={`ct-overlay is-${phase}`}
       style={{ '--cx': `${origin.x}px`, '--cy': `${origin.y}px` } as React.CSSProperties}
       role="status"
       aria-live="polite"
       aria-label={status}
     >
-      <div className="charge-grid" aria-hidden="true" />
-      <div className="charge-core">
-        <div className="charge-cell" aria-hidden="true">
-          <div className="charge-cell-fill">
-            <span className="charge-cell-sheen" />
+      <div className="ct-grid" aria-hidden="true" />
+      <div className="ct-core">
+        <div className="ct-cell" aria-hidden="true">
+          <div className="ct-cell-fill">
+            <span className="ct-cell-sheen" />
             {Array.from({ length: 8 }, (_, i) => (
               <i key={i} style={{ '--i': i } as React.CSSProperties} />
             ))}
           </div>
-          <div className="charge-cell-cap" />
-          <svg className="charge-bolt" viewBox="0 0 24 24">
+          <div className="ct-cell-cap" />
+          <svg className="ct-bolt" viewBox="0 0 24 24">
             <path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z" />
           </svg>
         </div>
-        <div className="charge-readout">
+        <div className="ct-readout">
           <span ref={percent}>0</span>
           <small>%</small>
         </div>
-        <p className="charge-status">{status}</p>
+        <p className="ct-status">{status}</p>
         {tasks.length > 0 && (
-          <ul className="charge-tasks">
+          <ul className="ct-tasks">
             {tasks.map((task) => (
               <li
                 key={task.label}
                 className={task.done ? (task.failed ? 'is-failed' : 'is-done') : ''}
               >
-                <span className="charge-task-dot" />
+                <span className="ct-task-dot" />
                 {task.label}
                 <em>{task.done ? (task.failed ? '稍后重试' : '就绪') : '载入中'}</em>
               </li>

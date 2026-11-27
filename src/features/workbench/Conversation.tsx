@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Alert, App, Button, Input, Segmented, Tooltip } from 'antd';
+import { Alert, App, Button, Input, Tooltip } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -38,6 +38,7 @@ import { ThinkingBubble } from './chat/ThinkingBubble';
 import { ReasoningBlock } from './chat/ReasoningBlock';
 import { MessageActions } from './chat/MessageActions';
 import { ChatArtifactCard } from './chat/ChatArtifactCard';
+import { ModeSwitch } from '../../components/ModeSwitch';
 import './chat/conversation.css';
 import './chat/process.css';
 import { useActivity } from './useActivity';
@@ -562,8 +563,26 @@ export function Conversation({
   function renderTimeline() {
     const blocks: ReactNode[] = [];
     let group: ActivityEvent[] = [];
+    // An invisible marker where each stage first appears, so the progress track can scroll here.
+    const anchored = new Set<string>();
+    const anchor = (events: ActivityEvent[]) => {
+      for (const event of events) {
+        const stage = String(event.data.node || event.data.phase || '');
+        if (!stage || anchored.has(stage) || !nodes.some((node) => node.id === stage)) continue;
+        anchored.add(stage);
+        blocks.push(
+          <span
+            key={`stage-${stage}`}
+            className="stage-anchor"
+            data-stage={stage}
+            aria-hidden="true"
+          />,
+        );
+      }
+    };
     const flush = (trailing: boolean) => {
       const steps = group.map(processStep).filter((step): step is Step => !!step);
+      if (steps.length) anchor(group);
       if (steps.length)
         blocks.push(
           <ProcessGroup
@@ -581,7 +600,9 @@ export function Conversation({
         continue;
       }
       flush(false);
-      blocks.push(renderItem(item));
+      const block = renderItem(item);
+      if (block && item.event) anchor([item.event]);
+      blocks.push(block);
     }
     flush(true);
     return blocks;
@@ -684,6 +705,7 @@ export function Conversation({
                         title={nodeLabel(node)}
                         file={files.find((file) => file.path === reports[node!])}
                         onOpen={onOpen}
+                        stage={node!}
                       />
                     ),
                 )}
@@ -855,16 +877,17 @@ export function Conversation({
               />
               <div className="composer-tools">
                 <div>
-                  <Segmented
-                    aria-label="对话协作方式"
+                  <ModeSwitch
+                    ariaLabel="对话协作方式"
                     size="small"
                     value={mode}
                     disabled={running || !!checkpoint}
-                    onChange={(value) => onModeChange(value as 'auto' | 'expert')}
-                    options={[
-                      { value: 'expert', label: '每阶段由我审阅' },
-                      { value: 'auto', label: '全自动' },
-                    ]}
+                    disabledReason={
+                      running
+                        ? '运行中不能切换，停止或本阶段结束后再切换'
+                        : '请先完成当前审阅，再切换协作方式'
+                    }
+                    onChange={onModeChange}
                   />
                   <Tooltip title="起始阶段、运行到哪一步、模型和运行参数">
                     <Button

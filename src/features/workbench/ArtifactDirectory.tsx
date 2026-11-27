@@ -29,13 +29,22 @@ export function ArtifactDirectory({
   value,
   onChange,
   truncated,
+  openSignal = 0,
 }: {
   files: ProjectFile[];
   value: string;
   onChange: (path: string) => void;
   truncated?: boolean;
+  /** Increment to open the dropdown from elsewhere (the workspace header). */
+  openSignal?: number;
 }) {
   const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const [lastSignal, setLastSignal] = useState(openSignal);
+  if (openSignal !== lastSignal) {
+    setLastSignal(openSignal);
+    setOpen(true);
+  }
   const [expanded, setExpanded] = useState<string[]>(
     artifactStages.map((group) => `group:${group.id}`),
   );
@@ -96,8 +105,11 @@ export function ArtifactDirectory({
       aria-label="选择项目文件"
       placeholder="按研究阶段选择产物"
       value={value || undefined}
+      open={open}
+      onOpenChange={setOpen}
       onChange={(path) => {
         setSearch('');
+        setOpen(false);
         onChange(path);
       }}
       searchValue={search}

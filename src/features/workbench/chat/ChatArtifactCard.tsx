@@ -17,18 +17,21 @@ export function ChatArtifactCard({
   title,
   file,
   onOpen,
+  stage,
 }: {
   projectId: string;
   path: string;
   title: string;
   file?: ProjectFile;
   onOpen: (path: string) => void;
+  /** Stage this card belongs to, so the progress track can scroll to it. */
+  stage?: string;
 }) {
   const extension = path.split('.').pop()?.toUpperCase() || 'FILE';
   const Icon =
     extension === 'PDF' ? FilePdfOutlined : extension === 'TEX' ? CodeOutlined : FileTextOutlined;
   return (
-    <div className="chat-deliverable" data-kind={extension.toLowerCase()}>
+    <div className="chat-deliverable" data-kind={extension.toLowerCase()} data-stage={stage}>
       <div className="chat-deliverable-heading">
         <span className="deliverable-dot" />
         阶段产物<span>{extension}</span>

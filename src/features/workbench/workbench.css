@@ -1399,7 +1399,7 @@ body:has(.research-layout) .main-shell {
 
 /* 方案阅读期间也保留文件入口，便于查看其他已生成的报告。 */
 .research-layout.proposal-focus .workspace-status,
-.research-layout.proposal-focus .workspace-file-count {
+.research-layout.proposal-focus .workspace-picker-trigger {
   display: none;
 }
 .research-layout.proposal-focus .workspace-panel-header {
