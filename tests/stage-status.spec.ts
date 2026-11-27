@@ -105,7 +105,7 @@ test('completed paper shows compile delivery as complete and opens its PDF', asy
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })

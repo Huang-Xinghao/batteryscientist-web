@@ -51,7 +51,7 @@ async function openWithActivity(page: Page, steps: Step[], running = true) {
     });
   });
   await page.route('**/api/projects/*/events?*', (route) => route.abort());
-  await page.goto('/');
+  await page.goto('/projects');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })

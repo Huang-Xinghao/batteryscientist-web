@@ -79,7 +79,7 @@ test('laboratory navigation shows grouped channels, measurements, filtering and 
   await page.route('**/api/laboratory/sources/bts/snapshot', (route) =>
     route.fulfill({ json: snapshot() }),
   );
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('.sidebar').getByRole('link', { name: '物理实验室', exact: true }).click();
   await expect(page.getByRole('heading', { name: /物理实验室/ })).toBeVisible();
   await expect(page.getByRole('tab', { name: '新威 BTS' })).toHaveAttribute(

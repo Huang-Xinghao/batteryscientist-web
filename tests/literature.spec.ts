@@ -177,7 +177,7 @@ S1 S3 S5 S10 I1
   expect(paperRelations(content.replace('### 领域图谱', '### 普通笔记'), papers)).toEqual([]);
 });
 async function open(page: Page, width: number) {
-  await page.goto('/');
+  await page.goto('/projects');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })
@@ -187,7 +187,7 @@ async function open(page: Page, width: number) {
 test('literature opens after a deployment removes deferred scripts', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto('/');
+  await page.goto('/projects');
   await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
   // An already-open page may lose access to old chunks after a deployment.
   // All scripts needed for the literature graph must already be loaded.
