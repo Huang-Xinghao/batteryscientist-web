@@ -367,9 +367,10 @@ test('context compaction stays visible through heartbeats and clears after compl
   await page.reload();
   await expect(card).toContainText('实验 Agent');
   await expect(card).not.toContainText('正在压缩上下文');
-  await expect(
-    page.getByText('实验 Agent · 上下文压缩完成，继续执行', { exact: true }),
-  ).toBeVisible();
+  // The compaction notice is a step in the folded execution-process block.
+  await expect(page.getByRole('region', { name: '执行过程' }).last()).toContainText(
+    '上下文压缩完成',
+  );
 });
 
 test('slow operations keep their current activity visible after refresh', async ({ page }) => {

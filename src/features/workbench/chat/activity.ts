@@ -5,10 +5,12 @@ function responseKey(event: ActivityEvent) {
   return JSON.stringify([event.run_id, d.session_id, d.task_id, d.role, d.phase, d.iteration]);
 }
 
-// Stream only public response text. A persisted response replaces its deltas;
-// a reset discards partial text from an abandoned request attempt.
+// Stream reply text and model thinking. A persisted response (or thinking) replaces
+// its deltas; a reset discards partial text from an abandoned request attempt.
 export function conversationEvents(events: ActivityEvent[]): ActivityEvent[] {
   const finished = new Set(events.filter((e) => e.kind === 'assistant_output').map(responseKey));
+  const thought = new Set(events.filter((e) => e.kind === 'assistant_reasoning').map(responseKey));
+  const thinking = new Map<string, ActivityEvent>();
   // A coordinator receipt is an assistant result, never a user prompt. Usually
   // its text is already present in the streamed response; retain a fallback for
   // histories where that response is not loaded.
@@ -32,6 +34,20 @@ export function conversationEvents(events: ActivityEvent[]): ActivityEvent[] {
       }
     } else if (event.kind === 'assistant_stream_start') {
       streams.delete(key);
+      thinking.delete(key);
+    } else if (event.kind === 'assistant_reasoning_delta') {
+      if (thought.has(key) || typeof event.data.content !== 'string') continue;
+      const previous = thinking.get(key);
+      thinking.set(key, {
+        ...event,
+        id: previous?.id || event.id,
+        kind: 'assistant_reasoning',
+        data: {
+          ...event.data,
+          content: String(previous?.data.content || '') + event.data.content,
+          streaming: true,
+        },
+      });
     } else if (event.kind === 'assistant_delta') {
       if (finished.has(key) || typeof event.data.content !== 'string') continue;
       const previous = streams.get(key);
@@ -47,7 +63,7 @@ export function conversationEvents(events: ActivityEvent[]): ActivityEvent[] {
       });
     } else result.push(event);
   }
-  return [...result, ...streams.values()].sort((a, b) => a.id - b.id);
+  return [...result, ...thinking.values(), ...streams.values()].sort((a, b) => a.id - b.id);
 }
 
 export function activityLabel(event?: ActivityEvent): string {
@@ -67,6 +83,8 @@ export function activityLabel(event?: ActivityEvent): string {
       return event.data.is_error ? '工具执行遇到问题，正在处理' : '工具已完成，正在分析结果';
     case 'assistant_delta':
       return '正在生成回复';
+    case 'assistant_reasoning_delta':
+      return '正在思考';
     case 'model_heartbeat':
       return event.data.context_compacting ? '正在压缩上下文' : '正在分析当前任务';
     case 'model_start':

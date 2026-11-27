@@ -324,3 +324,76 @@
 .charge-track.is-collapsed .charge-track-heading {
   margin-bottom: 0;
 }
+
+/* Collapsed: one line with the project name and a clickable mini track. */
+.charge-project {
+  margin: 0;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.charge-track-heading h2 {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.charge-track.is-collapsed .charge-track-heading h2 {
+  display: none;
+}
+.charge-mini {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+}
+.charge-mini-seg {
+  width: 22px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--surface-3);
+  cursor: pointer;
+  transition:
+    transform 0.25s var(--ease-spring),
+    box-shadow 0.25s;
+}
+.charge-mini-seg:hover {
+  transform: scaleY(1.5);
+}
+.charge-mini-seg.is-selected {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+}
+.charge-mini-seg.is-done {
+  background: linear-gradient(90deg, var(--charge-a), var(--charge-b));
+}
+.charge-mini-seg.is-running {
+  background: repeating-linear-gradient(120deg, var(--charge-a) 0 5px, var(--charge-b) 5px 10px);
+  background-size: 22px 100%;
+  box-shadow: 0 0 10px -2px var(--glow);
+  animation: charge-flow 0.7s linear infinite;
+}
+.charge-mini-seg.is-review {
+  background: var(--attn);
+  box-shadow: 0 0 10px -3px var(--attn);
+  animation: charge-breathe 1.8s ease-in-out infinite;
+}
+.charge-mini-seg.is-failed {
+  background: var(--danger);
+}
+.charge-mini-seg.is-stopped {
+  background: var(--muted);
+}
+@media (max-width: 760px) {
+  .charge-mini {
+    display: none;
+  }
+  .charge-project {
+    max-width: 140px;
+  }
+}

@@ -443,7 +443,11 @@ test('conversation replays execution output and opens artifacts in the workspace
   });
   await openFixture(page);
   await expect(page.getByText('已比较已有证据，接下来检查跨电芯泛化。')).toBeVisible();
-  await page.locator('.tool-activity summary').click();
+  // Tool calls fold into one steps block; expand it, then open the step's details.
+  const process = page.getByRole('region', { name: '执行过程' });
+  await expect(process).toContainText('已完成 1 步');
+  await process.getByRole('button', { name: /已完成 1 步/ }).click();
+  await process.getByRole('button', { name: /^读取文件/ }).click();
   await expect(page.getByText('已读取研究报告')).toBeVisible();
   await page.locator('.chat-artifact').click();
   // The literature report opens as the research map rather than a text editor.

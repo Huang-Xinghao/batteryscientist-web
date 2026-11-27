@@ -30,6 +30,8 @@ const groups = [
  * with the brand gradient, the running stage streams current, and the stage that
  * waits for the user glows amber. Each segment opens that stage's deliverable.
  */
+const TRACK_KEY = 'batteryscientist.progress-track';
+
 export function ChargeTrack({
   project,
   nodes,
@@ -48,7 +50,24 @@ export function ChargeTrack({
   const segments = useRef<Record<string, HTMLButtonElement | null>>({});
   const previousDone = useRef<number | null>(null);
   const [bump, setBump] = useState(0);
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default so the conversation and workspace get the height;
+  // the choice is remembered in this browser.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(TRACK_KEY) !== 'expanded';
+    } catch {
+      return true;
+    }
+  });
+  function toggle() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(TRACK_KEY, next ? 'collapsed' : 'expanded');
+    } catch {
+      /* Storage can be unavailable; the toggle still works for this page. */
+    }
+  }
 
   // Celebrate a stage that just finished while the page was open.
   useEffect(() => {
@@ -72,16 +91,36 @@ export function ChargeTrack({
         <Link to="/" className="back-link" aria-label="返回研究项目" title="返回研究项目">
           <ArrowLeftOutlined />
         </Link>
+        <h1 className="charge-project" title={project.name}>
+          {project.name}
+        </h1>
         <h2>研究进度</h2>
         <p>
           已完成 <strong>{doneCount}</strong> / {nodes.length}，{summary}
         </p>
+        {collapsed && (
+          <div className="charge-mini" role="group" aria-label="阶段">
+            {nodes.map((node) => {
+              const status = statuses[node.id];
+              return (
+                <button
+                  key={node.id}
+                  type="button"
+                  className={`charge-mini-seg is-${status} ${selected === node.id ? 'is-selected' : ''}`}
+                  aria-label={`${node.label}，${statusText[status] || '未开始'}`}
+                  title={`${node.label}${statusText[status] ? ` · ${statusText[status]}` : ''}`}
+                  onClick={() => onPick(node.id)}
+                />
+              );
+            })}
+          </div>
+        )}
         <button
           type="button"
           className="workbench-fold"
           aria-label={collapsed ? '展开研究进度' : '收起研究进度'}
           aria-expanded={!collapsed}
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggle}
         >
           {collapsed ? '展开 ▾' : '收起 ▴'}
         </button>
