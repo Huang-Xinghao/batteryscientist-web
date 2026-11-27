@@ -1,5 +1,5 @@
 /* Full-screen "charging" transition: grows from the clicked point, fills a cell, then dissolves. */
-.charge-overlay {
+.ct-overlay {
   --fill: 0;
   position: fixed;
   inset: 0;
@@ -16,7 +16,7 @@
     clip-path: circle(150vmax at var(--cx) var(--cy));
   }
 }
-.charge-overlay.is-leaving {
+.ct-overlay.is-leaving {
   clip-path: circle(150vmax at var(--cx) var(--cy));
   animation: charge-leave 0.7s cubic-bezier(0.6, 0, 0.2, 1) forwards;
 }
@@ -27,7 +27,7 @@
     filter: blur(10px);
   }
 }
-.charge-grid {
+.ct-grid {
   position: absolute;
   inset: -20%;
   background-image:
@@ -35,22 +35,22 @@
     linear-gradient(90deg, rgba(143, 128, 255, 0.09) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(circle at 50% 50%, #000 10%, transparent 60%);
-  animation: charge-grid-drift 6s linear infinite;
+  animation: ct-grid-drift 6s linear infinite;
 }
-@keyframes charge-grid-drift {
+@keyframes ct-grid-drift {
   to {
     background-position: 44px 44px;
   }
 }
-.charge-core {
+.ct-core {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  animation: charge-core-in 0.6s 0.25s var(--ease-out) both;
+  animation: ct-core-in 0.6s 0.25s var(--ease-out) both;
 }
-@keyframes charge-core-in {
+@keyframes ct-core-in {
   from {
     opacity: 0;
     transform: translateY(16px) scale(0.94);
@@ -58,7 +58,7 @@
 }
 
 /* The cell: an outline whose fill level follows --fill (0–1). */
-.charge-cell {
+.ct-cell {
   position: relative;
   width: min(260px, 64vw);
   aspect-ratio: 2.3;
@@ -69,7 +69,7 @@
     0 0 0 6px rgba(143, 128, 255, 0.06),
     0 0 60px -10px var(--glow);
 }
-.charge-cell-cap {
+.ct-cell-cap {
   position: absolute;
   right: -14px;
   top: 50%;
@@ -79,7 +79,7 @@
   border-radius: 0 6px 6px 0;
   background: rgba(185, 175, 255, 0.55);
 }
-.charge-cell-fill {
+.ct-cell-fill {
   position: relative;
   height: 100%;
   width: calc(var(--fill) * 100%);
@@ -89,7 +89,7 @@
   background: linear-gradient(90deg, var(--charge-a), var(--charge-b));
   box-shadow: 0 0 34px -4px var(--glow-b);
 }
-.charge-cell-sheen {
+.ct-cell-sheen {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -107,7 +107,7 @@
   }
 }
 /* Ions rising through the electrolyte. */
-.charge-cell-fill i {
+.ct-cell-fill i {
   position: absolute;
   bottom: -8px;
   left: calc(var(--i) * 12.5% + 4%);
@@ -123,7 +123,7 @@
     opacity: 0;
   }
 }
-.charge-bolt {
+.ct-bolt {
   position: absolute;
   inset: 0;
   margin: auto;
@@ -132,19 +132,19 @@
   fill: #fff;
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
   mix-blend-mode: overlay;
-  animation: charge-bolt 1.1s ease-in-out infinite;
+  animation: ct-bolt 1.1s ease-in-out infinite;
 }
-@keyframes charge-bolt {
+@keyframes ct-bolt {
   50% {
     opacity: 0.45;
     transform: scale(0.92);
   }
 }
-.is-full .charge-cell {
+.is-full .ct-cell {
   animation: charge-flash 0.38s ease-out;
   border-color: var(--charge-b);
 }
-.is-full .charge-bolt {
+.is-full .ct-bolt {
   animation: none;
   mix-blend-mode: normal;
 }
@@ -156,14 +156,14 @@
   }
 }
 
-.charge-readout {
+.ct-readout {
   display: flex;
   align-items: baseline;
   gap: 4px;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
-.charge-readout span {
+.ct-readout span {
   font-size: 52px;
   font-weight: 500;
   line-height: 1;
@@ -172,17 +172,17 @@
   background-clip: text;
   color: transparent;
 }
-.charge-readout small {
+.ct-readout small {
   font-size: 18px;
   color: var(--muted);
 }
-.charge-status {
+.ct-status {
   margin: 0;
   font-size: 14px;
   letter-spacing: 0.08em;
   color: var(--ink-2);
 }
-.charge-tasks {
+.ct-tasks {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -191,7 +191,7 @@
   padding: 0 16px;
   list-style: none;
 }
-.charge-tasks li {
+.ct-tasks li {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -205,28 +205,28 @@
     border-color 0.3s,
     color 0.3s;
 }
-.charge-tasks em {
+.ct-tasks em {
   font-style: normal;
   font-size: 11.5px;
   color: var(--faint);
 }
-.charge-task-dot {
+.ct-task-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--brand);
-  animation: charge-bolt 0.9s ease-in-out infinite;
+  animation: ct-bolt 0.9s ease-in-out infinite;
 }
-.charge-tasks li.is-done {
+.ct-tasks li.is-done {
   color: var(--ink-2);
   border-color: rgba(61, 224, 196, 0.4);
 }
-.charge-tasks li.is-done .charge-task-dot {
+.ct-tasks li.is-done .ct-task-dot {
   background: var(--ok);
   box-shadow: 0 0 8px var(--ok);
   animation: none;
 }
-.charge-tasks li.is-failed .charge-task-dot {
+.ct-tasks li.is-failed .ct-task-dot {
   background: var(--attn);
   animation: none;
 }

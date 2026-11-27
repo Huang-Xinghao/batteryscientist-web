@@ -17,7 +17,7 @@ import { Conversation } from './Conversation';
 import { FigureGallery } from './FigureGallery';
 import { RunDialog } from './RunDialog';
 import { reports } from './stages';
-import { stageArtifacts, artifactStage } from './artifactStages';
+import { stageArtifacts, artifactStage, artifactStages } from './artifactStages';
 import { useActivity } from './useActivity';
 
 export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
@@ -48,6 +48,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     queryFn: () => api.files(id),
     refetchInterval: live ? 60000 : 10000,
   });
+  const [pickerSignal, setPickerSignal] = useState(0);
   const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
   const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
   const [runOpen, setRunOpen] = useState(false);
@@ -125,15 +126,40 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
       modal.confirm({ title: '放弃未保存的修改？', onOk: open });
     else open();
   }
+  /** Scrolls the conversation to where a stage starts and flashes it; false when it has no messages. */
+  function revealStageInChat(node: string) {
+    const target = document.querySelector<HTMLElement>(
+      `.conversation-scroll [data-stage="${CSS.escape(node)}"]`,
+    );
+    if (!target) return false;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const flash = (
+      target.classList.contains('stage-anchor') ? target.nextElementSibling : target
+    ) as HTMLElement | null;
+    if (flash) {
+      flash.classList.remove('stage-flash');
+      void flash.offsetWidth;
+      flash.classList.add('stage-flash');
+      setTimeout(() => flash.classList.remove('stage-flash'), 1800);
+    }
+    return true;
+  }
   function pickStage(node: string) {
     const path = node === 'paper_write' ? 'paper/main.pdf' : reports[node];
-    if (node === 'literature' || files.data?.files.some((entry) => entry.path === path)) {
-      openFile(path, node);
-      return;
-    }
+    const hasArtifact =
+      node === 'literature' || !!files.data?.files.some((entry) => entry.path === path);
     const label = nodes.find((item) => item.id === node)?.label || node;
-    message.info(`${label}还没有产物，前一阶段完成后才会执行。`);
+    // The artifact opens on the right and the chat scrolls to that stage on the left.
+    if (hasArtifact) openFile(path, node);
+    const inChat = revealStageInChat(node);
+    if (!hasArtifact)
+      message.info(
+        inChat
+          ? `${label}还没有产物，已定位到对话中的相关记录。`
+          : `${label}还没有产物，前一阶段完成后才会执行。`,
+      );
   }
+
   if (project.isPending)
     return (
       <div className="page">
@@ -340,7 +366,17 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             <div>
               <FolderOpenOutlined />
               <h2>{proposalFocus ? '研究方案' : '工作区'}</h2>
-              <span className="workspace-file-count">{deliverables.length} 个产物</span>
+              <button
+                type="button"
+                className="workspace-picker-trigger"
+                aria-label={`选择产物，共 ${deliverables.length} 个`}
+                onClick={() => {
+                  setTab('report');
+                  setPickerSignal((value) => value + 1);
+                }}
+              >
+                {deliverables.length} 个产物 ▾
+              </button>
             </div>
             <Space size={4}>
               <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
@@ -387,7 +423,12 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
                         value={file}
                         onChange={(path) => openFile(path)}
                         truncated={files.data?.truncated}
+                        openSignal={pickerSignal}
                       />
+                      <span className="file-selector-label">
+                        {artifactStages.find((stage) => stage.id === artifactStage(file))?.label ||
+                          '产物'}
+                      </span>
                       {paperFocus && (
                         <Button
                           type="text"

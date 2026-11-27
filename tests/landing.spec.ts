@@ -25,7 +25,7 @@ for (const width of [1512, 390]) {
     await page.evaluate(() => scrollTo(0, 0));
 
     await page.locator('.landing-hero').getByRole('link', { name: '进入工作台' }).click();
-    const overlay = page.locator('.charge-overlay');
+    const overlay = page.locator('.ct-overlay');
     await expect(overlay).toBeVisible();
     await expect(overlay.getByText('研究项目')).toBeVisible();
     await page.waitForTimeout(700);

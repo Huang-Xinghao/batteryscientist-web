@@ -165,7 +165,7 @@ test('mode choice is shared by composer and run settings and submits the chosen 
   await fixture(page, { running: false, mode: 'auto' });
   const composerMode = page.getByLabel('对话协作方式');
   await expect(composerMode).toBeVisible();
-  await composerMode.getByText('每阶段由我审阅', { exact: true }).click();
+  await composerMode.getByText('专家模式', { exact: true }).click();
   await page.getByRole('button', { name: '运行设置', exact: true }).click();
   await expect(
     page.getByText('专家模式 · 每个阶段审阅后继续（推荐）', { exact: true }),

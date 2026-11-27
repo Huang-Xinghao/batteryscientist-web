@@ -18,6 +18,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { active, api } from '../../api/client';
 import { Status } from '../../components/Status';
+import { ModeSwitch } from '../../components/ModeSwitch';
 import { formatDate } from '../../lib/date';
 import { CountUp } from '../../components/fx/CountUp';
 import { ParticleField } from '../../components/fx/ParticleField';
@@ -155,15 +156,7 @@ export function Projects() {
             }}
           />
           <div className="research-hero-actions">
-            <Segmented
-              aria-label="协作方式"
-              value={mode}
-              onChange={(value) => setMode(value as 'expert' | 'auto')}
-              options={[
-                { value: 'expert', label: '每阶段由我审阅' },
-                { value: 'auto', label: '全自动' },
-              ]}
-            />
+            <ModeSwitch value={mode} onChange={setMode} />
             <span className="research-hero-hint">
               {mode === 'expert'
                 ? '每个阶段完成后停下来，等你确认再继续'
