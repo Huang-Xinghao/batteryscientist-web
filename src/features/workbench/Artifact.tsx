@@ -186,7 +186,7 @@ function FileArtifact({
               onClick={() =>
                 modal.confirm({
                   title: '重新加载文件并放弃当前草稿？',
-                  content: '如需保留修改，请先下载草稿。',
+                  content: '当前未保存的修改将被丢弃。',
                   onOk: async () => {
                     const result = await file.refetch();
                     if (!result.data || result.isError) throw new Error('重新加载失败，草稿已保留');

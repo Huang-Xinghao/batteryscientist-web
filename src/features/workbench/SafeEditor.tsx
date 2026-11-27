@@ -20,7 +20,7 @@ class EditorBoundary extends Component<EditorProps & { children: ReactNode }, { 
       <div className="editor-fallback">
         <Alert
           type="warning"
-          message="代码编辑器加载失败，已切换为文本编辑。修改后仍可保存或下载草稿。"
+          message="代码编辑器加载失败，已切换为文本编辑。修改后仍可按 Ctrl / ⌘ S 保存。"
         />
         <textarea
           aria-label="文件文本编辑器"
