@@ -56,15 +56,7 @@ async function mockCoordinatorReply(page: import('@playwright/test').Page) {
   });
 }
 
-// Markdown reports open in the reading view; switch to the editor before editing.
-async function showEditor(page: import('@playwright/test').Page) {
-  await page.getByRole('combobox', { name: '选择项目文件' }).fill('DATA_REPORT.md');
-  await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
-  await page.locator('.artifact-actions .ant-segmented-item').filter({ hasText: '编辑' }).click();
-  await expect(page.locator('.monaco-editor').first()).toBeVisible();
-}
-
-async function openFixture(page: import('@playwright/test').Page, requireEditor = true) {
+async function openFixture(page: import('@playwright/test').Page) {
   await page.goto('/');
   await page
     .getByRole('link')
@@ -75,7 +67,6 @@ async function openFixture(page: import('@playwright/test').Page, requireEditor 
     await expect(page.getByRole('navigation', { name: '工作台视图' })).toBeVisible();
     await page.getByRole('button', { name: '产物工作区', exact: true }).click();
   }
-  if (requireEditor) await showEditor(page);
 }
 
 test('lists real projects, searches, and opens a research report', async ({ page }) => {
@@ -103,25 +94,6 @@ test('creates a project with a separate research directory', async ({ page }) =>
   await page.getByRole('button', { name: '启动研究' }).click();
   await expect(page.getByLabel('研究目标')).toBeVisible();
   await page.getByRole('button', { name: /取\s*消/ }).click();
-});
-
-test('edits and saves a report through the API', async ({ page }) => {
-  await openFixture(page);
-  const editor = page.locator('.monaco-editor').first();
-  await expect(editor).toBeVisible();
-  await editor.click();
-  await page.keyboard.press('ControlOrMeta+End');
-  await page.keyboard.insertText('\n\n浏览器保存验证。');
-  await expect(page.getByText('有未保存的修改，请在切换文件或页面前保存。')).toBeVisible();
-  await page.locator('.back-link').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: /取\s*消/ }).click();
-  await expect(editor).toBeVisible();
-  await page.getByRole('button', { name: /保\s*存/ }).click();
-  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
-  await page.reload();
-  await showEditor(page);
-  await expect(page.locator('.monaco-editor').first()).toContainText('浏览器保存验证。');
 });
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
@@ -348,12 +320,13 @@ for (const viewport of [
       });
     }
     await openFixture(page);
-    const toolbar = page.locator('.artifact-toolbar');
-    const editor = page.locator('.monaco-editor').first();
+    const toolbar = page.locator('.artifact-directory');
+    const content = page.getByRole('region', { name: '文件内容' });
+    await expect(content).toContainText('研究证据与实验结果。');
+    await expect(page.locator('.monaco-editor')).toHaveCount(0);
     const top = (await toolbar.boundingBox())!.y;
-    await editor.click();
-    await page.keyboard.press('ControlOrMeta+End');
-    await expect(editor).toContainText('研究证据与实验结果。');
+    await content.hover();
+    await page.mouse.wheel(0, 1500);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     expect((await toolbar.boundingBox())!.y).toBe(top);
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
@@ -635,7 +608,7 @@ test('completed project messages use routing instead of resuming improvement', a
   await page.route('**/api/projects/*/runs', () => {
     throw new Error('Message must not resume the previous workflow node');
   });
-  await openFixture(page, false);
+  await openFixture(page);
   await page.getByRole('textbox', { name: '研究指令' }).fill('只修改图一的配色，其他图不要动');
   await page.getByRole('button', { name: '发送研究指令' }).click();
   await expect.poll(() => body?.prompt).toBe('只修改图一的配色，其他图不要动');
@@ -660,7 +633,7 @@ test('running project retains unaccepted messages without stopping the task', as
       json: { intent: 'status', accepted: false, reply: '当前任务仍在执行，请稍后提交。' },
     });
   });
-  await openFixture(page, false);
+  await openFixture(page);
   await page.getByRole('textbox', { name: '研究指令' }).fill('现在进度怎么样？');
   await page.getByRole('button', { name: '发送研究指令' }).click();
   await expect.poll(() => prompt).toBe('现在进度怎么样？');
@@ -731,7 +704,7 @@ for (const width of [1512, 390]) {
         },
       }),
     );
-    await openFixture(page, false);
+    await openFixture(page);
     await page.getByRole('button', { name: '审阅方案', exact: true }).click();
     await expect(
       page.getByText('项目正在进行：实验执行。当前方案和已生成报告可继续查看。'),
@@ -740,8 +713,12 @@ for (const width of [1512, 390]) {
     await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
     await page.getByRole('button', { name: /^文献研究，/ }).click();
     await expect(page.locator('.artifact-filename')).toHaveText('文献研究图谱');
-    await showEditor(page);
-    await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
+    await page.getByRole('combobox', { name: '选择项目文件' }).fill('DATA_REPORT.md');
+    await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
+    await expect(page.getByRole('region', { name: '文件内容' })).toBeVisible();
+    // Markdown reports are read-only: no editor, no save action.
+    await expect(page.locator('.monaco-editor')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /保\s*存/ })).toHaveCount(0);
   });
 }
 
