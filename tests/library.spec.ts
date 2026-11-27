@@ -46,7 +46,7 @@ test('paradigm graph supports mobile node reading and returning to the graph', a
 
 test('battery library navigates categories and internal links on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('.sidebar').getByRole('link', { name: '电池资源库', exact: true }).click();
   await expect(page.getByRole('heading', { name: '电池资源库', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '总览与指南 1' }).click();

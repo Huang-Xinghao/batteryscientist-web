@@ -57,7 +57,7 @@ async function mockCoordinatorReply(page: import('@playwright/test').Page) {
 }
 
 async function openFixture(page: import('@playwright/test').Page) {
-  await page.goto('/');
+  await page.goto('/projects');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })
@@ -72,7 +72,7 @@ async function openFixture(page: import('@playwright/test').Page) {
 test('lists real projects, searches, and opens a research report', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto('/');
+  await page.goto('/projects');
   await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
   await page.getByPlaceholder('搜索项目或研究目标').fill('不存在的研究');
   await expect(page.getByText('没有匹配的项目')).toBeVisible();
@@ -86,7 +86,7 @@ test('lists real projects, searches, and opens a research report', async ({ page
 });
 
 test('creates a project with a separate research directory', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('浏览器新建项目');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
@@ -136,7 +136,7 @@ test('connection errors provide a retry action', async ({ page }) => {
       body: JSON.stringify({ detail: '服务暂不可用' }),
     }),
   );
-  await page.goto('/');
+  await page.goto('/projects');
   await expect(page.getByText('项目加载失败')).toBeVisible();
   await expect(page.getByText('服务暂不可用')).toBeVisible();
   await expect(page.getByRole('button', { name: /重\s*试/ })).toBeVisible();
@@ -155,7 +155,7 @@ test('login gates project data without a floating logout button', async ({ page 
       json: signedIn ? { authenticated: true } : { detail: '用户名或密码错误' },
     });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await expect(page.getByText('登录你的研究空间')).toBeVisible();
   await expect(page.locator('a.project-card')).toHaveCount(0);
   await page.getByLabel('用户名').fill('admin');
@@ -174,7 +174,7 @@ test('expert questions have a visible entry and collaboration mode can be chosen
   await openFixture(page);
   await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /优先研究哪一个泛化问题/ })).toBeVisible();
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('模式选择测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
@@ -460,7 +460,7 @@ test('mobile conversation sends checkpoint feedback and opens the artifact works
 });
 
 test('composer starts research and preserves its draft when submission fails', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('对话启动测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
@@ -492,7 +492,7 @@ test('new project sends questions to the coordinator and replays saved chat on r
   page,
 }) => {
   await mockCoordinatorReply(page);
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('普通问答测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
@@ -559,7 +559,7 @@ test('single image opens the shared sibling preview', async ({ page }) => {
 test('message copy and reuse protect an existing composer draft', async ({ page, context }) => {
   await mockCoordinatorReply(page);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('消息操作测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
@@ -725,7 +725,7 @@ for (const width of [1512, 390]) {
 test('Enter sends, Shift+Enter inserts a newline, and IME confirmation does not send', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/projects');
   await page.getByRole('button', { name: '新建研究项目' }).click();
   await page.getByLabel('项目名称').fill('回车发送测试');
   await page.getByRole('button', { name: '创建项目', exact: true }).click();

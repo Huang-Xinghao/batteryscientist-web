@@ -44,7 +44,7 @@ test('chat and report links preview project files in the workspace without openi
       },
     }),
   );
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   const projectUrl = page.url();
   const pageCount = page.context().pages().length;

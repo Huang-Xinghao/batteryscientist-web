@@ -3,11 +3,96 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#173d35" />
+    <meta name="theme-color" content="#0e1014" />
     <title>BatteryScientist · 科研工作台</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      /* Boot screen: shown until the app mounts, then faded out by main.tsx. */
+      html,
+      body {
+        margin: 0;
+        background: #0e1014;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(50% 40% at 50% 45%, rgba(143, 128, 255, 0.14), transparent 70%), #0e1014;
+        transition:
+          opacity 0.5s ease,
+          filter 0.5s ease,
+          transform 0.5s ease;
+      }
+      #boot.is-done {
+        opacity: 0;
+        filter: blur(8px);
+        transform: scale(1.04);
+        pointer-events: none;
+      }
+      .boot-cell {
+        position: relative;
+        width: 96px;
+        height: 44px;
+        padding: 5px;
+        box-sizing: border-box;
+        border: 2px solid rgba(185, 175, 255, 0.6);
+        border-radius: 12px;
+        box-shadow: 0 0 40px -8px rgba(143, 128, 255, 0.55);
+      }
+      .boot-cell::after {
+        content: '';
+        position: absolute;
+        right: -8px;
+        top: 13px;
+        width: 5px;
+        height: 14px;
+        border-radius: 0 3px 3px 0;
+        background: rgba(185, 175, 255, 0.6);
+      }
+      .boot-cell i {
+        display: block;
+        height: 100%;
+        border-radius: 7px;
+        background: linear-gradient(90deg, #8f80ff, #3de0c4);
+        animation: boot-fill 1.6s cubic-bezier(0.5, 0, 0.2, 1) infinite;
+      }
+      @keyframes boot-fill {
+        from {
+          width: 8%;
+        }
+        80%,
+        to {
+          width: 100%;
+        }
+      }
+      #boot p {
+        margin: 18px 0 0;
+        font:
+          12px/1 ui-monospace,
+          Menlo,
+          monospace;
+        letter-spacing: 0.24em;
+        color: #97a0af;
+        text-align: center;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-cell i {
+          animation: none;
+          width: 70%;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot" aria-hidden="true">
+      <div>
+        <div class="boot-cell"><i></i></div>
+        <p>CHARGING</p>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

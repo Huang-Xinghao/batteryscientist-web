@@ -81,7 +81,7 @@ async function refineWithLeftoverDraft(page: Page) {
     calls.runs.push(route.request().postDataJSON());
     return route.fulfill({ status: 202, json: { id: 'mock-run', status: 'queued' } });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page
     .getByRole('link')
     .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })

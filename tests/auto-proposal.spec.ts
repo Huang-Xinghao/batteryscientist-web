@@ -67,7 +67,7 @@ async function fixture(page: Page, expert = false, running = false) {
     runs.push(route.request().postDataJSON());
     await route.fulfill({ status: 202, json: { id: 'mock-run', status: 'queued' } });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   if (running) await expect(page.getByLabel('模型架构图')).toBeVisible();
   else await page.getByRole('button', { name: '查看方案', exact: true }).first().click();

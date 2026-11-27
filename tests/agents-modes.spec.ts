@@ -143,7 +143,7 @@ async function fixture(
       },
     }),
   );
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
 }
 

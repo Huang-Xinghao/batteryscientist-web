@@ -61,7 +61,7 @@ test('stage selector lists only deliverables without nesting physical folders or
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   await page.locator('.artifact-directory .ant-select-selector').click();
   const popup = page.locator('.artifact-directory-popup');

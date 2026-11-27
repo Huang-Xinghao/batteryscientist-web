@@ -39,7 +39,7 @@ test('task question survives refresh and answers the original task while preserv
       await route.fulfill({ json: { status: 'answered' } });
     }
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   await expect(page.getByRole('article', { name: '任务提问' })).toBeVisible();
   await expect(page.getByRole('status', { name: '当前执行进展' })).toContainText('等待你的回答');
@@ -84,7 +84,7 @@ test('stopping task disables its question form', async ({ page }) => {
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   await expect(page.getByLabel('任务回答')).toBeDisabled();
   await expect(page.getByRole('button', { name: '任务正在停止', exact: true })).toBeDisabled();

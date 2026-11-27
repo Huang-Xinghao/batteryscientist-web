@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 for (const width of [1512, 390]) {
   test(`artifact directory groups files and searches paths at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
+    await page.goto('/projects');
     await page
       .getByRole('link')
       .filter({ has: page.getByRole('heading', { name: 'battery-study' }) })

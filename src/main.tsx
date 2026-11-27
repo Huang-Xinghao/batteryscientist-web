@@ -73,3 +73,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// Fade out the boot screen from index.html once the first frame has painted.
+requestAnimationFrame(() => {
+  const boot = document.getElementById('boot');
+  if (!boot) return;
+  boot.classList.add('is-done');
+  setTimeout(() => boot.remove(), 600);
+});

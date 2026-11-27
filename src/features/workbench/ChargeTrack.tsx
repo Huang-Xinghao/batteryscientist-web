@@ -88,7 +88,7 @@ export function ChargeTrack({
   return (
     <section className={`charge-track ${collapsed ? 'is-collapsed' : ''}`} aria-label="研究进度">
       <div className="charge-track-heading">
-        <Link to="/" className="back-link" aria-label="返回研究项目" title="返回研究项目">
+        <Link to="/projects" className="back-link" aria-label="返回研究项目" title="返回研究项目">
           <ArrowLeftOutlined />
         </Link>
         <h1 className="charge-project" title={project.name}>

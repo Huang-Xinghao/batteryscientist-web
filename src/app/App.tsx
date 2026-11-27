@@ -7,7 +7,7 @@ import {
   ExperimentOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { Projects } from '../features/projects/Projects';
 import { Workbench } from '../features/workbench/Workbench';
@@ -16,14 +16,17 @@ import { Laboratory } from '../features/laboratory/Laboratory';
 import { motion } from 'motion/react';
 import { AmbientEffects } from '../components/fx/AmbientEffects';
 import { useReducedMotion } from '../components/fx/motion';
+import { BatteryMark } from '../components/BatteryMark';
+import { ChargeTransitionProvider } from '../components/fx/ChargeTransition';
+import { Landing } from '../features/landing/Landing';
 
 const navItems = [
   {
-    to: '/',
+    to: '/projects',
     label: '研究项目',
     short: '研究项目',
     icon: <ApartmentOutlined />,
-    match: (path: string) => path === '/' || path.startsWith('/projects'),
+    match: (path: string) => path.startsWith('/projects'),
   },
   {
     to: '/libraries/paradigms',
@@ -48,45 +51,21 @@ const navItems = [
   },
 ];
 
-/** Battery outline whose charge glows with the brand gradient. */
-function BatteryMark() {
+export function App() {
   return (
-    <svg width="34" height="34" viewBox="0 0 30 30" aria-hidden="true" className="battery-mark">
-      <defs>
-        <linearGradient id="battery-mark-gradient" x1="0" x2="1">
-          <stop offset="0" stopColor="var(--charge-a)" />
-          <stop offset="1" stopColor="var(--charge-b)" />
-        </linearGradient>
-      </defs>
-      <rect
-        x="3"
-        y="7"
-        width="21"
-        height="16"
-        rx="3.5"
-        fill="none"
-        stroke="url(#battery-mark-gradient)"
-        strokeWidth="2"
-      />
-      <rect x="24.5" y="12" width="2.5" height="6" rx="1" fill="var(--charge-b)" />
-      <rect
-        className="battery-mark-charge"
-        x="6.5"
-        y="10.5"
-        width="14"
-        height="9"
-        rx="1.5"
-        fill="url(#battery-mark-gradient)"
-      />
-    </svg>
+    <ChargeTransitionProvider>
+      <AppRoutes />
+    </ChargeTransitionProvider>
   );
 }
-export function App() {
+
+function AppRoutes() {
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000 });
   const location = useLocation();
   const reduced = useReducedMotion();
   // Only animate when the page itself changes, not on query-string updates.
   const routeKey = location.pathname.startsWith('/projects/') ? 'project' : location.pathname;
+  if (location.pathname === '/') return <Landing />;
   return (
     <div className="shell">
       <AmbientEffects />
@@ -151,7 +130,7 @@ export function App() {
           transition={{ duration: 0.45, ease: [0.2, 0.9, 0.2, 1] }}
         >
           <Routes location={location}>
-            <Route path="/" element={<Projects />} />
+            <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<Workbench nodes={health.data?.nodes || []} />} />
             <Route path="/libraries/paradigms" element={<Library kind="paradigms" />} />
             <Route path="/libraries/battery" element={<Library kind="battery" />} />
@@ -205,10 +184,13 @@ export function App() {
             <Route
               path="*"
               element={
-                <Result status="404" title="页面不存在" extra={<Link to="/">返回研究项目</Link>} />
+                <Result
+                  status="404"
+                  title="页面不存在"
+                  extra={<Link to="/projects">返回研究项目</Link>}
+                />
               }
             />
-            <Route path="/projects" element={<Navigate to="/" replace />} />
           </Routes>
         </motion.div>
       </main>
