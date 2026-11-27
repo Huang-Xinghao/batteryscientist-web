@@ -1,5 +1,5 @@
 import { Segmented, Tooltip } from 'antd';
-import { AuditOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { UserOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import './mode-switch.css';
 
 export type CollaborationMode = 'expert' | 'auto';
@@ -9,7 +9,7 @@ const modeHints: Record<CollaborationMode, string> = {
   auto: '全自动：主控自己验收并推进，只在需要你决定时提问',
 };
 
-/** Expert / automatic collaboration switch; each mode has its own color so the choice reads at a glance. */
+/** Compact collaboration choice shared by project creation and the composer. */
 export function ModeSwitch({
   value,
   onChange,
@@ -38,7 +38,7 @@ export function ModeSwitch({
           value: 'expert',
           label: (
             <span className="mode-switch-option" title={modeHints.expert}>
-              <AuditOutlined aria-hidden="true" />
+              <UserOutlined aria-hidden="true" />
               专家模式
             </span>
           ),

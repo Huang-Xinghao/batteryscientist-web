@@ -14,15 +14,11 @@ for (const width of [1512, 390]) {
     const picker = page.getByRole('combobox', { name: '选择项目文件' });
     await picker.fill('figures/test.png');
     await expect(page.locator('.directory-file[title="figures/test.png"]')).toBeVisible();
-    await expect(page.locator('.directory-group')).toHaveText([/图表与图片/]);
+    await expect(page.locator('.directory-group')).toHaveText([/论文绘图/]);
     await picker.fill('');
     await expect(page.locator('.directory-caption')).toBeVisible();
-    await expect(
-      page.locator('.directory-group').filter({ hasText: '论文与 LaTeX' }),
-    ).toBeVisible();
-    await expect(
-      page.locator('.directory-group').filter({ hasText: '研究报告与计划' }),
-    ).toBeVisible();
+    await expect(page.locator('.directory-group').filter({ hasText: '论文写作' })).toBeVisible();
+    await expect(page.locator('.directory-group').filter({ hasText: '文献研究' })).toBeVisible();
     await picker.fill('paper/main.tex');
     await page.locator('.directory-file[title="paper/main.tex"]').click();
     await expect(page.locator('.latex-source .monaco-editor')).toBeVisible();
@@ -31,10 +27,11 @@ for (const width of [1512, 390]) {
     await expect(page.getByText('没有匹配的产物')).toBeVisible();
     await picker.fill('RESEARCH_REPORT');
     await page.locator('.directory-file[title="literature/RESEARCH_REPORT.md"]').click();
+    await expect(page.locator('.artifact-directory-popup')).toBeHidden();
     await expect(page.getByLabel('文献研究图谱', { exact: true })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .toBe(true);
     await page.locator('.artifact-directory .ant-select-selector').click();
     await picker.fill('');
     await page.screenshot({ path: `artifacts/artifact-directory-${width}.png` });

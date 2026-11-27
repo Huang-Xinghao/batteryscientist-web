@@ -37,8 +37,12 @@ export function useActivity(projectId: string, role: AgentRole | 'all' = 'all', 
       if (refreshTimer) return;
       refreshTimer = setTimeout(() => {
         // Events are the signal that project state or files changed.
-        for (const key of ['project', 'files', 'log', 'file'])
-          client.invalidateQueries({ queryKey: [key, projectId] });
+        for (const key of ['project', 'files', 'log', 'file', 'messages'])
+          client.invalidateQueries(
+            { queryKey: [key, projectId] },
+            // A live update must not cancel an in-flight history page.
+            { cancelRefetch: key !== 'messages' },
+          );
         refreshTimer = undefined;
       }, 500);
     }

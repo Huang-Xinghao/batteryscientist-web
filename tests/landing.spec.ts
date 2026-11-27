@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+test('reduced motion still enters the workbench when preloading stalls', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/api/projects', () => {});
+  await page.goto('/');
+  await page.locator('.landing-hero').getByRole('link', { name: '进入工作台' }).click();
+  await expect(page).toHaveURL(/\/projects$/, { timeout: 8000 });
+  await expect(page.locator('.ct-overlay')).toHaveCount(0);
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
 for (const width of [1512, 390]) {
   test(`landing page charges into the workbench at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -27,7 +37,7 @@ for (const width of [1512, 390]) {
     await page.locator('.landing-hero').getByRole('link', { name: '进入工作台' }).click();
     const overlay = page.locator('.ct-overlay');
     await expect(overlay).toBeVisible();
-    await expect(overlay.getByText('研究项目')).toBeVisible();
+    await expect(overlay.locator('.ct-tasks li').filter({ hasText: '研究项目' })).toBeVisible();
     await page.waitForTimeout(700);
     await page.screenshot({ path: `artifacts/landing-charge-${width}.png` });
     await expect(page).toHaveURL(/\/projects$/);

@@ -17,13 +17,13 @@ export function ThinkingBubble({
   const seconds = since ? Math.max(0, Math.round((now - new Date(since).getTime()) / 1000)) : 0;
   return (
     <div className="thinking-bubble" role="status" aria-live="polite">
-      <span className="thinking-orb" aria-hidden="true">
+      <span className="thinking-indicator" aria-hidden="true">
         <span />
         <span />
         <span />
       </span>
       <div>
-        <strong className="shiny-text">{agent} 正在思考</strong>
+        <strong>{agent} 正在思考</strong>
         <small>
           {activity}
           {seconds ? ` · ${seconds} 秒` : ''}

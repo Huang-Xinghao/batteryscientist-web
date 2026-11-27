@@ -2,20 +2,20 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Dropdown, Skeleton, Space, Tabs, Tooltip } from 'antd';
 import {
+  ArrowLeftOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { active, api, type NodeInfo, type RunInput, type UserQuestion } from '../../api/client';
 import { Artifact } from './Artifact';
 import { ChargeTrack } from './ChargeTrack';
 import { ArtifactDirectory } from './ArtifactDirectory';
 import { Conversation } from './Conversation';
 import { FigureGallery } from './FigureGallery';
-import { RunDialog } from './RunDialog';
 import { reports } from './stages';
 import { stageArtifacts, artifactStage, artifactStages } from './artifactStages';
 import { useActivity } from './useActivity';
@@ -51,7 +51,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const [pickerSignal, setPickerSignal] = useState(0);
   const [selectedFile, setSelectedFile] = useState(ideaCanvasOpen ? reports.refine : '');
   const [selectedNode, setSelectedNode] = useState(ideaCanvasOpen ? 'refine' : '');
-  const [runOpen, setRunOpen] = useState(false);
   const [mode, setMode] = useState<'auto' | 'expert'>('expert');
   useEffect(() => {
     if (project.data?.state.mode === 'auto' || project.data?.state.mode === 'expert')
@@ -69,7 +68,6 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const run = useMutation({
     mutationFn: (values: RunInput) => api.run(id, values),
     onSuccess: (result) => {
-      setRunOpen(false);
       activity.refresh();
       client.invalidateQueries({ queryKey: ['project', id] });
       client.invalidateQueries({ queryKey: ['projects'] });
@@ -99,14 +97,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     onError: (reason: Error) => message.error(reason.message),
   });
   function stopRun() {
-    modal.confirm({
-      title: '停止当前运行？',
-      content:
-        '将通知本轮主控和角色任务取消，并保留已保存的产物。收到执行回执后确认结果；结果不明时需先核查。',
-      okText: '停止运行',
-      okButtonProps: { danger: true },
-      onOk: () => stop.mutateAsync(),
-    });
+    if (!stop.isPending) stop.mutate();
   }
   function openFile(path: string, node?: string) {
     if (path === file) {
@@ -145,7 +136,7 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     return true;
   }
   function pickStage(node: string) {
-    const path = node === 'paper_write' ? 'paper/main.pdf' : reports[node];
+    const path = reports[node];
     const hasArtifact =
       node === 'literature' || !!files.data?.files.some((entry) => entry.path === path);
     const label = nodes.find((item) => item.id === node)?.label || node;
@@ -183,6 +174,9 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   const checkpoint = p.status === 'awaiting_user' ? p.state.expert_checkpoint : undefined;
   const fileList = files.data?.files || [];
   const deliverables = stageArtifacts(fileList);
+  const researchStarted = Boolean(
+    p.state.project_goal?.trim() || p.state.history?.length || deliverables.length,
+  );
   const currentNode =
     selectedNode ||
     (p.runs[0]?.options.action === 'revise' ? String(p.progress.current_node || '') : '') ||
@@ -198,18 +192,18 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
     !completedNodes.has('paper_write') &&
     fileList.some((entry) => entry.path === reports.refine);
   const stageFile =
-    checkpoint?.node === currentNode
+    checkpoint && checkpoint.node === currentNode
       ? checkpoint.report
       : showAutoProposal
         ? reports.refine
         : reports[currentNode];
-  const defaultFile = stageFile === 'paper/main.tex' ? 'paper/main.pdf' : stageFile;
+  const defaultFile = stageFile;
   const file =
     selectedFile ||
     (defaultFile === reports.literature || fileList.some((entry) => entry.path === defaultFile)
       ? defaultFile
       : deliverables.find((entry) => artifactStage(entry.path) === currentNode)?.path || '');
-  const latexOpen = /\.tex$/i.test(file) && tab === 'report';
+  const latexOpen = /\.(tex|bib)$/i.test(file) && tab === 'report';
   const paperFocus = tab === 'report' && (latexOpen || /^paper\/.*\.pdf$/i.test(file));
   const proposalFocus = file === reports.refine;
   const visibleChatWidth = latexOpen && !userResized ? 28 : chatWidth;
@@ -251,39 +245,50 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
   }
   return (
     <div className="workbench-page">
-      <ChargeTrack
-        project={p}
-        nodes={nodes}
-        selected={
-          Object.keys(reports).find((node) => reports[node] === file && node === currentNode) ||
-          Object.keys(reports).find((node) => reports[node] === file)
-        }
-        onPick={pickStage}
-      />
-      <nav className="mobile-pane-nav" aria-label="工作台视图">
-        <Button
-          aria-label="研究对话"
-          type={mobilePane === 'conversation' ? 'primary' : 'text'}
-          icon={<MessageOutlined />}
-          onClick={() => {
-            setMobilePane('conversation');
-            setMaximized(false);
-          }}
-        >
-          研究对话
-        </Button>
-        <Button
-          aria-label="产物工作区"
-          type={mobilePane === 'workspace' ? 'primary' : 'text'}
-          icon={<FolderOpenOutlined />}
-          onClick={() => setMobilePane('workspace')}
-        >
-          产物工作区
-        </Button>
-      </nav>
+      {researchStarted ? (
+        <ChargeTrack
+          project={p}
+          nodes={nodes}
+          selected={
+            Object.keys(reports).find((node) => reports[node] === file && node === currentNode) ||
+            Object.keys(reports).find((node) => reports[node] === file)
+          }
+          onPick={pickStage}
+        />
+      ) : (
+        <header className="discussion-heading">
+          <Link to="/projects" aria-label="返回研究项目" className="back-link">
+            <ArrowLeftOutlined />
+          </Link>
+          <h1>{p.name}</h1>
+        </header>
+      )}
+      {researchStarted && (
+        <nav className="mobile-pane-nav" aria-label="工作台视图">
+          <Button
+            aria-label="研究对话"
+            type={mobilePane === 'conversation' ? 'primary' : 'text'}
+            icon={<MessageOutlined />}
+            onClick={() => {
+              setMobilePane('conversation');
+              setMaximized(false);
+            }}
+          >
+            研究对话
+          </Button>
+          <Button
+            aria-label="产物工作区"
+            type={mobilePane === 'workspace' ? 'primary' : 'text'}
+            icon={<FolderOpenOutlined />}
+            onClick={() => setMobilePane('workspace')}
+          >
+            产物工作区
+          </Button>
+        </nav>
+      )}
       <div
         ref={layoutRef}
-        className={`research-layout pane-${mobilePane} ${maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''} ${proposalFocus ? 'proposal-focus' : ''}`}
+        className={`research-layout ${researchStarted ? `pane-${mobilePane}` : 'discussion-only'} ${researchStarted && maximized ? 'workspace-maximized' : ''} ${latexOpen ? 'latex-open' : ''} ${paperFocus ? 'paper-focus' : ''} ${proposalFocus ? 'proposal-focus' : ''}`}
         style={{ '--chat-width': `${visibleChatWidth}%` } as CSSProperties}
       >
         <Conversation
@@ -317,203 +322,195 @@ function ProjectWorkbench({ id, nodes }: { id: string; nodes: NodeInfo[] }) {
             }
           }}
           onSend={send}
+          stopping={stop.isPending}
           onStop={stopRun}
-          onSettings={() => setRunOpen(true)}
           pending={run.isPending || sendMessage.isPending}
         />
-        <div
-          className="workspace-resizer"
-          role="separator"
-          aria-label="调整工作区宽度"
-          aria-orientation="vertical"
-          aria-valuemin={25}
-          aria-valuemax={55}
-          aria-valuenow={visibleChatWidth}
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-              event.preventDefault();
-              setUserResized(true);
-              setChatWidth(() =>
-                Math.min(55, Math.max(25, visibleChatWidth + (event.key === 'ArrowLeft' ? -2 : 2))),
-              );
-            }
-          }}
-          onPointerDown={(event) => {
-            setUserResized(true);
-            dragRef.current = true;
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => {
-            if (!dragRef.current || !layoutRef.current) return;
-            const bounds = layoutRef.current.getBoundingClientRect();
-            setChatWidth(
-              Math.min(55, Math.max(25, ((event.clientX - bounds.left) / bounds.width) * 100)),
-            );
-          }}
-          onPointerUp={(event) => {
-            dragRef.current = false;
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }}
-          onPointerCancel={() => {
-            dragRef.current = false;
-          }}
-        >
-          <span />
-        </div>
-        <section className="workspace-panel" aria-label="产物工作区">
-          <div className="workspace-panel-header">
-            <div>
-              <FolderOpenOutlined />
-              <h2>{proposalFocus ? '研究方案' : '工作区'}</h2>
-              <button
-                type="button"
-                className="workspace-picker-trigger"
-                aria-label={`选择产物，共 ${deliverables.length} 个`}
-                onClick={() => {
-                  setTab('report');
-                  setPickerSignal((value) => value + 1);
-                }}
-              >
-                {deliverables.length} 个产物 ▾
-              </button>
+        {researchStarted && (
+          <>
+            <div
+              className="workspace-resizer"
+              role="separator"
+              aria-label="调整工作区宽度"
+              aria-orientation="vertical"
+              aria-valuemin={25}
+              aria-valuemax={55}
+              aria-valuenow={visibleChatWidth}
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                  event.preventDefault();
+                  setUserResized(true);
+                  setChatWidth(() =>
+                    Math.min(
+                      55,
+                      Math.max(25, visibleChatWidth + (event.key === 'ArrowLeft' ? -2 : 2)),
+                    ),
+                  );
+                }
+              }}
+              onPointerDown={(event) => {
+                setUserResized(true);
+                dragRef.current = true;
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!dragRef.current || !layoutRef.current) return;
+                const bounds = layoutRef.current.getBoundingClientRect();
+                setChatWidth(
+                  Math.min(55, Math.max(25, ((event.clientX - bounds.left) / bounds.width) * 100)),
+                );
+              }}
+              onPointerUp={(event) => {
+                dragRef.current = false;
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }}
+              onPointerCancel={() => {
+                dragRef.current = false;
+              }}
+            >
+              <span />
             </div>
-            <Space size={4}>
-              <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
-                <Button
-                  type="text"
-                  size="small"
-                  aria-label={maximized ? '恢复分栏' : '展开工作区'}
-                  icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-                  onClick={() => setMaximized(!maximized)}
-                />
-              </Tooltip>
-            </Space>
-          </div>
-          <Tabs
-            activeKey={tab}
-            onChange={setTab}
-            className="workspace-tabs"
-            items={[
-              {
-                key: 'report',
-                label: '产物',
-                children: (
-                  <>
-                    <div className="file-selector">
-                      {paperFocus && (
-                        <Dropdown
-                          trigger={['click']}
-                          menu={{
-                            items: [{ key: 'figures', label: '图片画廊' }],
-                            onClick: ({ key }) => setTab(key),
-                          }}
-                        >
-                          <Button
-                            type="text"
-                            size="small"
-                            aria-label="文件与产物"
-                            title="文件与产物"
-                            icon={<FolderOpenOutlined />}
-                          />
-                        </Dropdown>
-                      )}
-                      <ArtifactDirectory
-                        files={deliverables}
-                        value={file}
-                        onChange={(path) => openFile(path)}
-                        truncated={files.data?.truncated}
-                        openSignal={pickerSignal}
-                      />
-                      <span className="file-selector-label">
-                        {artifactStages.find((stage) => stage.id === artifactStage(file))?.label ||
-                          '产物'}
-                      </span>
-                      {paperFocus && (
-                        <Button
-                          type="text"
-                          size="small"
-                          aria-label={maximized ? '恢复分栏' : '展开工作区'}
-                          title={maximized ? '恢复分栏' : '展开工作区'}
-                          icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-                          onClick={() => setMaximized(!maximized)}
-                        />
-                      )}
-                    </div>
-                    {files.isError && (
-                      <Alert
-                        type="warning"
-                        message="文件目录加载失败"
-                        action={
-                          <Button size="small" onClick={() => files.refetch()}>
-                            重试
-                          </Button>
-                        }
-                      />
-                    )}
-                    <Artifact
-                      key={`${id}:${file}`}
-                      reviewRequest={reviewRequest}
-                      collaborationMode={p.state.mode === 'auto' ? 'auto' : 'expert'}
-                      projectId={id}
-                      onOpen={openFile}
-                      research={{
-                        goal: p.state.project_goal || '',
-                        events: activity.events,
-                        error: activity.error,
-                      }}
-                      path={file}
-                      running={running}
-                      live={live}
-                      workflowStage={
-                        nodes.find(
-                          (node) => node.id === (p.progress.current_node || p.state.current_node),
-                        )?.label
-                      }
-                      files={fileList}
-                      onDirtyChange={(dirty) => {
-                        dirtyRef.current = dirty;
-                      }}
+            <section className="workspace-panel" aria-label="产物工作区">
+              <div className="workspace-panel-header">
+                <div>
+                  <FolderOpenOutlined />
+                  <h2>{proposalFocus ? '研究方案' : '工作区'}</h2>
+                  <button
+                    type="button"
+                    className="workspace-picker-trigger"
+                    aria-label={`选择产物，共 ${deliverables.length} 个`}
+                    onClick={() => {
+                      setTab('report');
+                      setPickerSignal((value) => value + 1);
+                    }}
+                  >
+                    {deliverables.length} 个产物 ▾
+                  </button>
+                </div>
+                <Space size={4}>
+                  <Tooltip title={maximized ? '恢复对话与工作区' : '展开工作区'}>
+                    <Button
+                      type="text"
+                      size="small"
+                      aria-label={maximized ? '恢复分栏' : '展开工作区'}
+                      icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                      onClick={() => setMaximized(!maximized)}
                     />
-                  </>
-                ),
-              },
-              {
-                key: 'figures',
-                label: '图片',
-                children: <FigureGallery projectId={id} files={deliverables} />,
-              },
-            ]}
-          />
-          <footer className="workspace-status">
-            <FileTextOutlined />
-            <span>{phase?.label || '研究产物'}</span>
-            <span>
-              {p.state.mode === 'expert'
-                ? '专家模式'
-                : p.state.mode === 'auto'
-                  ? '自动模式'
-                  : '待配置'}
-            </span>
-          </footer>
-        </section>
+                  </Tooltip>
+                </Space>
+              </div>
+              <Tabs
+                activeKey={tab}
+                onChange={setTab}
+                className="workspace-tabs"
+                items={[
+                  {
+                    key: 'report',
+                    label: '产物',
+                    children: (
+                      <>
+                        <div className="file-selector">
+                          {paperFocus && (
+                            <Dropdown
+                              trigger={['click']}
+                              menu={{
+                                items: [{ key: 'figures', label: '图片画廊' }],
+                                onClick: ({ key }) => setTab(key),
+                              }}
+                            >
+                              <Button
+                                type="text"
+                                size="small"
+                                aria-label="文件与产物"
+                                title="文件与产物"
+                                icon={<FolderOpenOutlined />}
+                              />
+                            </Dropdown>
+                          )}
+                          <ArtifactDirectory
+                            files={deliverables}
+                            value={file}
+                            onChange={(path) => openFile(path)}
+                            truncated={files.data?.truncated}
+                            openSignal={pickerSignal}
+                          />
+                          <span className="file-selector-label">
+                            {artifactStages.find((stage) => stage.id === artifactStage(file))
+                              ?.label || '产物'}
+                          </span>
+                          {paperFocus && (
+                            <Button
+                              type="text"
+                              size="small"
+                              aria-label={maximized ? '恢复分栏' : '展开工作区'}
+                              title={maximized ? '恢复分栏' : '展开工作区'}
+                              icon={maximized ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                              onClick={() => setMaximized(!maximized)}
+                            />
+                          )}
+                        </div>
+                        {files.isError && (
+                          <Alert
+                            type="warning"
+                            message="文件目录加载失败"
+                            action={
+                              <Button size="small" onClick={() => files.refetch()}>
+                                重试
+                              </Button>
+                            }
+                          />
+                        )}
+                        <Artifact
+                          key={`${id}:${file}`}
+                          reviewRequest={reviewRequest}
+                          collaborationMode={p.state.mode === 'auto' ? 'auto' : 'expert'}
+                          projectId={id}
+                          onOpen={openFile}
+                          research={{
+                            goal: p.state.project_goal || '',
+                            events: activity.events,
+                            error: activity.error,
+                          }}
+                          path={file}
+                          running={running}
+                          live={live}
+                          workflowStage={
+                            nodes.find(
+                              (node) =>
+                                node.id === (p.progress.current_node || p.state.current_node),
+                            )?.label
+                          }
+                          files={fileList}
+                          onDirtyChange={(dirty) => {
+                            dirtyRef.current = dirty;
+                          }}
+                        />
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'figures',
+                    label: '图片',
+                    children: <FigureGallery projectId={id} files={deliverables} />,
+                  },
+                ]}
+              />
+              <footer className="workspace-status">
+                <FileTextOutlined />
+                <span>{phase?.label || '研究产物'}</span>
+                <span>
+                  {p.state.mode === 'expert'
+                    ? '专家模式'
+                    : p.state.mode === 'auto'
+                      ? '自动模式'
+                      : '待配置'}
+                </span>
+              </footer>
+            </section>
+          </>
+        )}
       </div>
-      <RunDialog
-        mode={mode}
-        onModeChange={setMode}
-        open={runOpen}
-        onClose={() => setRunOpen(false)}
-        onRun={(values) => {
-          if (dirtyRef.current) {
-            message.warning('请先保存产物修改，再启动研究');
-            return;
-          }
-          run.mutate(values);
-        }}
-        pending={run.isPending}
-        project={p}
-        nodes={nodes}
-      />
     </div>
   );
 }

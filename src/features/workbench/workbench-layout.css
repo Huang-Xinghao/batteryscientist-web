@@ -2,6 +2,30 @@
  * Workbench layout: the conversation and the workspace are the page.
  * Chrome (progress, panel headers, composer) is kept to thin bands around them.
  */
+.discussion-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 16px;
+}
+.discussion-heading h1 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.research-layout.discussion-only > .conversation-panel {
+  width: 100%;
+  flex: 1;
+}
+.research-layout.discussion-only > .conversation-panel .chat-composer {
+  width: min(880px, calc(100% - 28px));
+  margin-inline: auto;
+  box-sizing: border-box;
+}
 .workbench-page:has(.research-layout) {
   padding: 8px 10px 10px;
   gap: 8px;

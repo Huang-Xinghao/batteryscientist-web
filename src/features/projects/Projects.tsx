@@ -162,12 +162,6 @@ export function Projects() {
                 ? '每个阶段完成后停下来，等你确认再继续'
                 : '主控自己验收并推进，只在需要你决定时提问'}
             </span>
-            <Button icon={<FolderOpenOutlined />} onClick={() => showCreate(true)}>
-              导入项目
-            </Button>
-            <Button icon={<PlusOutlined />} onClick={() => showCreate(false)}>
-              新建研究项目
-            </Button>
             <Button
               ref={startButton}
               type="primary"

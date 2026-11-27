@@ -65,6 +65,122 @@ const tools: Step[] = [
   ['tool_end', { tool: 'read_wiki', call_id: 'b', output: '论文摘要' }],
 ];
 
+test('user history remains visible during a worker handoff and after reload', async ({ page }) => {
+  await page.route('**/api/projects/*/messages*', (route) =>
+    route.fulfill({
+      json: {
+        messages: Array.from({ length: 35 }, (_, index) => ({
+          id: `saved-message-${index}`,
+          created_at: new Date(Date.now() - (40 - index) * 60000).toISOString(),
+          content: `已保存的用户消息 ${index}`,
+          label: '研究指令',
+        })),
+        next_cursor: null,
+      },
+    }),
+  );
+  await openWithActivity(page, [
+    ['assignment_start', { assignment: { role: 'idea_generator', node: 'literature' } }],
+    ['model_start', {}],
+  ]);
+  await expect(page.locator('.user-message')).toHaveCount(36);
+  await expect(page.locator('.user-message').filter({ hasText: '已保存的用户消息 0' })).toHaveCount(
+    1,
+  );
+  await page.reload();
+  await expect(page.locator('.user-message')).toHaveCount(36);
+  await expect(
+    page.locator('.user-message').filter({ hasText: '已保存的用户消息 34' }),
+  ).toHaveCount(1);
+});
+
+for (const width of [1512, 390]) {
+  test(`scrolling up loads earlier messages and execution records at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    let olderRequests = 0;
+    let olderActivityRequests = 0;
+    let release: () => void = () => {};
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/projects/*/messages*', async (route) => {
+      const older = new URL(route.request().url()).searchParams.has('before');
+      if (older) {
+        olderRequests += 1;
+        await hold;
+      }
+      const start = older ? 0 : 20;
+      await route.fulfill({
+        json: {
+          messages: Array.from({ length: 20 }, (_, index) => ({
+            id: `scroll-message-${start + index}`,
+            created_at: new Date(Date.now() - (60 - start - index) * 60000).toISOString(),
+            content: `历史研究指令 ${start + index}`,
+            label: '研究指令',
+          })),
+          next_cursor: older ? null : 'older-messages',
+        },
+      });
+    });
+    await openWithActivity(page, [], false);
+    await page.route('**/api/projects/*/activity?*', async (route) => {
+      const url = new URL(route.request().url());
+      const older = url.searchParams.has('before');
+      if (older) {
+        olderActivityRequests += 1;
+        await hold;
+      }
+      const start = older ? 0 : 20;
+      await route.fulfill({
+        json: {
+          has_more: !older,
+          events: url.searchParams.has('after')
+            ? []
+            : Array.from({ length: 20 }, (_, index) => ({
+                id: start + index + 1,
+                project_id: url.pathname.split('/')[3],
+                run_id: RUN,
+                kind: 'assistant_output',
+                data: { role: 'main', content: `历史执行记录 ${start + index}` },
+                created_at: new Date(
+                  Date.now() - (60 - start - index) * 60000 + 1000,
+                ).toISOString(),
+              })),
+        },
+      });
+    });
+    await page.reload();
+    await expect(page.locator('.user-message')).toHaveCount(21);
+    await expect(page.getByRole('button', { name: '加载更早的执行记录' })).toHaveCount(0);
+    const scroller = page.locator('.conversation-scroll');
+    await scroller.evaluate((element) => {
+      element.scrollTop = 100;
+    });
+    await expect.poll(() => olderRequests).toBe(1);
+    const anchor = page.locator('.user-message').filter({ hasText: '历史研究指令 21' });
+    await expect.poll(() => olderActivityRequests).toBe(1);
+    const before = (await anchor.boundingBox())!.y;
+    await scroller.hover();
+    await page.mouse.wheel(0, -1);
+    release();
+    await expect(page.locator('.user-message')).toHaveCount(41);
+    await expect(page.getByText('历史执行记录 0', { exact: true })).toHaveCount(1);
+    await expect
+      .poll(async () => Math.abs((await anchor.boundingBox())!.y - before))
+      .toBeLessThan(5);
+    expect(olderRequests).toBe(1);
+    expect(olderActivityRequests).toBe(1);
+    await scroller.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await expect(page.locator('.user-message').filter({ hasText: '历史研究指令 0' })).toBeVisible();
+    expect(olderRequests).toBe(1);
+  });
+}
+
 test('finished tool calls fold into one steps block that opens step by step', async ({ page }) => {
   await openWithActivity(
     page,

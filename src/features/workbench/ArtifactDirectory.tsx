@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import type { ProjectFile } from '../../api/client';
+import { useReducedMotion } from '../../components/fx/motion';
 import './directory.css';
 import { artifactStages, artifactStage, stageArtifacts } from './artifactStages';
 
@@ -45,6 +46,7 @@ export function ArtifactDirectory({
     setLastSignal(openSignal);
     setOpen(true);
   }
+  const reducedMotion = useReducedMotion();
   const [expanded, setExpanded] = useState<string[]>(
     artifactStages.map((group) => `group:${group.id}`),
   );
@@ -67,8 +69,16 @@ export function ArtifactDirectory({
           ),
           children: [],
         };
-        for (const file of [...entries].sort((a, b) =>
-          a.path.localeCompare(b.path, 'zh-CN', { numeric: true }),
+        const priority = (path: string) =>
+          path === 'paper/main.tex' || path === 'paper/main.pdf'
+            ? 0
+            : /\.(tex|bib)$/i.test(path)
+              ? 1
+              : 2;
+        for (const file of [...entries].sort(
+          (a, b) =>
+            priority(a.path) - priority(b.path) ||
+            a.path.localeCompare(b.path, 'zh-CN', { numeric: true }),
         )) {
           const parts = file.path.split('/');
           root.children!.push({
@@ -78,7 +88,9 @@ export function ArtifactDirectory({
             title: (
               <span className="directory-file" title={file.path}>
                 {fileIcon(file.path)}
-                <span>{parts.at(-1)}</span>
+                <span>
+                  {file.path.startsWith('paper/') ? parts.slice(1).join('/') : parts.at(-1)}
+                </span>
               </span>
             ),
           });
@@ -112,8 +124,13 @@ export function ArtifactDirectory({
         setOpen(false);
         onChange(path);
       }}
+      transitionName={reducedMotion ? '' : undefined}
+      placement="bottomLeft"
       searchValue={search}
-      onSearch={setSearch}
+      onSearch={(value) => {
+        setSearch(value);
+        setOpen(true);
+      }}
       showSearch
       treeLine
       treeData={tree}
@@ -126,6 +143,7 @@ export function ArtifactDirectory({
       listHeight={420}
       popupClassName="artifact-directory-popup"
       popupMatchSelectWidth={false}
+      dropdownStyle={{ width: 'min(560px, calc(100vw - 24px))', minWidth: 0 }}
       dropdownRender={(menu) => (
         <div>
           <div className="directory-caption">

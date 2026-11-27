@@ -2,8 +2,8 @@
 .process-group {
   margin: 2px 0 6px;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface-2);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
   overflow: hidden;
   animation: fx-pop 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both;
   transition:
@@ -19,15 +19,16 @@
 }
 .process-summary {
   width: 100%;
-  min-height: 44px;
+  min-height: 34px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 6px 10px;
   border: 0;
   background: transparent;
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 12.5px;
+  line-height: 20px;
   text-align: left;
   cursor: pointer;
 }
@@ -37,26 +38,24 @@
 .process-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 22px;
-  height: 22px;
-  border-radius: 50%;
-  font-size: 11px;
-  color: var(--on-brand);
-  background: var(--ok);
+  flex: 0 0 16px;
+  height: 16px;
+  font-size: 12px;
+  color: #a6cdb5;
+  background: transparent;
 }
 .is-live .process-icon {
-  color: var(--brand-strong);
-  background: var(--brand-soft);
+  color: var(--muted);
 }
 .has-error .process-icon {
-  background: var(--danger);
+  color: var(--danger);
 }
 .process-title {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -66,11 +65,11 @@
   text-overflow: ellipsis;
   font-style: normal;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .process-meta {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -156,7 +155,7 @@
   height: 22px;
   border-radius: 50%;
   font-size: 10px;
-  color: var(--ok);
+  color: var(--muted);
   background: var(--surface-2);
   border: 1px solid var(--line);
 }
@@ -212,7 +211,7 @@
   color: var(--muted);
 }
 
-/* Thinking: an orbiting trio while the agent works and nothing streams yet. */
+/* Three quiet dots share the same visual weight as the completion mark. */
 .thinking-bubble {
   display: flex;
   align-items: center;
@@ -233,48 +232,35 @@
   font-size: 12px;
   color: var(--muted);
 }
-.thinking-orb {
-  position: relative;
-  flex: 0 0 30px;
-  height: 30px;
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 0 0 22px;
+  height: 22px;
+  color: var(--muted);
+}
+.thinking-indicator span {
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 8%, var(--charge-a) 40%, var(--charge-b));
-  box-shadow: 0 0 18px -2px var(--glow);
-  animation: orb-breathe 2.4s ease-in-out infinite;
+  background: currentColor;
+  opacity: 0.35;
+  animation: thinking-pulse 1.8s ease-in-out infinite;
 }
-.thinking-orb span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin: -2.5px;
-  border-radius: 50%;
-  background: var(--charge-b);
-  box-shadow: 0 0 6px var(--charge-b);
-  animation: orb-orbit 1.6s linear infinite;
+.thinking-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
 }
-.thinking-orb span:nth-child(2) {
-  animation-delay: -0.53s;
-  background: #fff;
+.thinking-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
 }
-.thinking-orb span:nth-child(3) {
-  animation-delay: -1.06s;
-  background: var(--attn);
-  box-shadow: 0 0 6px var(--attn);
-}
-@keyframes orb-orbit {
-  from {
-    transform: rotate(0deg) translateX(21px) rotate(0deg);
+@keyframes thinking-pulse {
+  30% {
+    opacity: 1;
   }
-  to {
-    transform: rotate(360deg) translateX(21px) rotate(-360deg);
-  }
-}
-@keyframes orb-breathe {
-  50% {
-    transform: scale(0.88);
-    filter: brightness(1.15);
+  60% {
+    opacity: 0.35;
   }
 }
 
@@ -308,8 +294,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .thinking-orb,
-  .thinking-orb span,
+  .thinking-indicator span,
   .stream-caret {
     animation: none;
   }

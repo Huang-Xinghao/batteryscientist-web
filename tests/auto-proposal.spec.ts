@@ -70,7 +70,9 @@ async function fixture(page: Page, expert = false, running = false) {
   await page.goto('/projects');
   await page.locator('a.project-card').filter({ hasText: 'battery-study' }).click();
   if (running) await expect(page.getByLabel('模型架构图')).toBeVisible();
-  else await page.getByRole('button', { name: '查看方案', exact: true }).first().click();
+  else if (expert)
+    await page.getByRole('button', { name: '查看方案', exact: true }).first().click();
+  else await expect(page.getByLabel('模型架构图')).toBeVisible();
   return {
     runs,
     setStale: () => {

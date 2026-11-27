@@ -18,7 +18,7 @@ export const artifactStages = [
 /** Classify existing deliverables for display; physical files stay in place. */
 export function artifactStage(path: string): string | undefined {
   const p = path.replaceAll('\\', '/').toLowerCase();
-  if (!/\.(md|pdf|png|jpe?g|webp|gif|svg)$/i.test(p)) return;
+  if (!/\.(md|tex|bib|pdf|png|jpe?g|webp|gif|svg)$/i.test(p)) return;
   if (
     /(?:^|\/)(?:\.[^/]+|node_modules|__pycache__|templates?|archives?|previews?|cache|tmp|temp|checkpoints?)(?:\/|$)/.test(
       p,
@@ -39,6 +39,7 @@ export function artifactStage(path: string): string | undefined {
     return 'experiment_bridge';
   if (/^(figures?|images?|plots?|charts?)\//.test(p)) return 'paper_figure';
   if (/^paper\//.test(p)) {
+    if (/\.(png|jpe?g|webp|gif|svg)$/.test(p)) return 'paper_figure';
     if (/review|improvement|revision/.test(p)) return 'improvement';
     if (/delivery|\.pdf$/.test(p)) return 'paper_compile';
     return 'paper_write';

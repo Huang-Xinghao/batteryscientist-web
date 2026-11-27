@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Alert, App, Button, Input, Tooltip } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   CheckOutlined,
   LoadingOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   active,
+  api,
   statusLabels,
   type ActivityEvent,
   type NodeInfo,
@@ -43,6 +44,7 @@ import './chat/conversation.css';
 import './chat/process.css';
 import { useActivity } from './useActivity';
 import { ProjectFileLink } from '../../shared/file-preview/ProjectFileLink';
+import { ProjectImage } from '../../shared/file-preview/ProjectImage';
 import { runIssue } from './runIssue';
 
 function visibleText(value: unknown) {
@@ -68,7 +70,7 @@ export function Conversation({
   onSend,
   onAnswer,
   onStop,
-  onSettings,
+  stopping = false,
   pending,
 }: {
   mode: 'auto' | 'expert';
@@ -87,10 +89,30 @@ export function Conversation({
   onSend: (text: string, mode: 'auto' | 'expert') => Promise<void>;
   onAnswer: (question: UserQuestion, answer: string) => Promise<void>;
   onStop: () => void;
-  onSettings: () => void;
+  stopping?: boolean;
   pending: boolean;
 }) {
   const { modal } = App.useApp();
+  const renderImage = useCallback(
+    ({ src, alt, title }: { src?: string; alt?: string; title?: string }) => (
+      <ProjectImage
+        projectId={project.id}
+        projectRoot={project.path}
+        files={files}
+        src={src}
+        alt={alt}
+        title={title}
+      />
+    ),
+    [project.id, project.path, files],
+  );
+  const messages = useInfiniteQuery({
+    queryKey: ['messages', project.id],
+    queryFn: ({ pageParam }) => api.messages(project.id, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.next_cursor || undefined,
+    refetchInterval: 30000,
+  });
   const [text, setText] = useState('');
   const [answerDraft, setAnswerDraft] = useState<{ key: string; values: string[] }>({
     key: '',
@@ -101,12 +123,54 @@ export function Conversation({
   const roleHistory = useActivity(project.id, visibleRole, visibleRole !== 'all');
   // Keep the global stream for actor tracking; page each role's history independently.
   const historyEvents = visibleRole === 'all' ? events : roleHistory.events;
-  const historyHasOlder = visibleRole === 'all' ? hasOlder : roleHistory.hasOlder;
-  const historyLoadingOlder = visibleRole === 'all' ? loadingOlder : roleHistory.loadingOlder;
-  const loadHistory = visibleRole === 'all' ? loadOlder : roleHistory.loadOlder;
-  const scroller = useRef<HTMLDivElement>(null);
+  const historyHasOlder =
+    (visibleRole === 'all' ? hasOlder : roleHistory.hasOlder) || messages.hasNextPage;
+  const historyLoadingOlder =
+    (visibleRole === 'all' ? loadingOlder : roleHistory.loadingOlder) ||
+    messages.isFetchingNextPage;
   const input = useRef<import('antd').InputRef>(null);
   const stick = useRef(true);
+  const scroller = useRef<HTMLDivElement>(null);
+  const paging = useRef(false);
+  const scrollTop = useRef(0);
+  const [restoreHistory, setRestoreHistory] = useState<{
+    height: number;
+    role: string;
+  }>();
+  const restoredHistory = useRef<typeof restoreHistory>(undefined);
+  async function loadHistory() {
+    const element = scroller.current;
+    if (!element || paging.current || historyLoadingOlder || !historyHasOlder) return;
+    paging.current = true;
+    stick.current = false;
+    const snapshot = {
+      height: element.scrollHeight,
+      role: visibleRole,
+    };
+    try {
+      await Promise.all([
+        (visibleRole === 'all' ? hasOlder : roleHistory.hasOlder)
+          ? visibleRole === 'all'
+            ? loadOlder()
+            : roleHistory.loadOlder()
+          : Promise.resolve(),
+        messages.hasNextPage ? messages.fetchNextPage() : Promise.resolve(),
+      ]);
+    } finally {
+      setRestoreHistory(snapshot);
+    }
+  }
+  useLayoutEffect(() => {
+    if (!restoreHistory || restoredHistory.current === restoreHistory) return;
+    restoredHistory.current = restoreHistory;
+    const { height, role } = restoreHistory;
+    const element = scroller.current;
+    if (element && role === visibleRole) {
+      element.scrollTop += element.scrollHeight - height;
+      scrollTop.current = element.scrollTop;
+    }
+    paging.current = false;
+  }, [restoreHistory, visibleRole]);
   const running = active(project.status);
   const issue = runIssue(project);
   const checkpoint =
@@ -139,11 +203,12 @@ export function Conversation({
   useEffect(() => {
     if (stick.current && scroller.current)
       scroller.current.scrollTop = scroller.current.scrollHeight;
-  }, [events, historyEvents, visibleRole, project.status, project.runs.length]);
+  }, [events, historyEvents, visibleRole, project.status, project.runs.length, messages.data]);
   async function send() {
     if (pending || tooLong || (!checkpoint && !text.trim())) return;
     try {
       await onSend(feedback, mode);
+      await messages.refetch();
       setText('');
       setAnswerDraft({ key: '', values: [] });
       stick.current = true;
@@ -202,7 +267,7 @@ export function Conversation({
       return false;
     return true;
   });
-  const turns = (visibleRole === 'all' || visibleRole === 'main' ? project.runs : [])
+  const recentTurns = project.runs
     .filter(
       (run) =>
         run.options.action === 'review' ||
@@ -217,6 +282,21 @@ export function Conversation({
           : String(run.options.message_prompt || run.options.prompt),
       label: run.options.action === 'review' ? '审阅反馈' : '研究指令',
     }));
+  const turns = [
+    ...new Map(
+      [
+        ...recentTurns,
+        ...(messages.data?.pages
+          .flatMap((page) => page.messages)
+          .map((message) => ({
+            key: `user-${message.id}`,
+            time: message.created_at,
+            text: message.content,
+            label: message.label,
+          })) || []),
+      ].map((turn) => [turn.key, turn]),
+    ).values(),
+  ];
   const timeline = [
     ...turns.map((turn) => ({ ...turn, event: undefined as ActivityEvent | undefined })),
     ...eventViews.map((event) => ({
@@ -279,6 +359,7 @@ export function Conversation({
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
+                  img: renderImage,
                   a: ({ href, title, children }) => (
                     <ProjectFileLink
                       projectId={project.id}
@@ -336,6 +417,7 @@ export function Conversation({
             content={content}
             streaming={data.streaming === true}
             components={{
+              img: renderImage,
               a: ({ href, title, children }) => (
                 <ProjectFileLink
                   projectId={project.id}
@@ -641,31 +723,33 @@ export function Conversation({
       <AgentStatus project={project} events={events} />
       <div
         className="conversation-scroll"
+        style={{ overflowAnchor: 'none' }}
         ref={scroller}
+        onWheel={(event) => {
+          if (event.deltaY < 0 && scroller.current && scroller.current.scrollTop < 160)
+            void loadHistory();
+        }}
         onScroll={() => {
           const element = scroller.current!;
-          stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+          const upwards = element.scrollTop < scrollTop.current;
+          scrollTop.current = element.scrollTop;
+          stick.current =
+            !paging.current && element.scrollHeight - element.scrollTop - element.clientHeight < 80;
           setAtBottom(stick.current);
+          if (upwards && element.scrollTop < 160) void loadHistory();
         }}
       >
         <div className="conversation-messages">
-          {historyHasOlder && (
-            <Button
-              type="text"
-              block
-              loading={historyLoadingOlder}
-              onClick={async () => {
-                const height = scroller.current?.scrollHeight || 0;
-                stick.current = false;
-                await loadHistory();
-                requestAnimationFrame(() => {
-                  if (scroller.current)
-                    scroller.current.scrollTop += scroller.current.scrollHeight - height;
-                });
-              }}
-            >
-              加载更早的执行记录
-            </Button>
+          {messages.isError && (
+            <Alert
+              type="warning"
+              message="用户消息历史加载失败"
+              action={
+                <Button size="small" onClick={() => messages.refetch()}>
+                  重试
+                </Button>
+              }
+            />
           )}
           {(visibleRole === 'all' || visibleRole === 'main') &&
             project.state.project_goal &&
@@ -679,10 +763,9 @@ export function Conversation({
           {!project.state.project_goal && !timeline.length && (
             <div className="conversation-welcome">
               <span className="agent-symbol">✦</span>
-              <h2>从一个研究问题开始</h2>
+              <h2>从一个问题开始</h2>
               <p>
-                告诉 BatteryScientist
-                你想探索什么。分析进度、工具调用和研究输出会出现在这里，阶段产物会汇入右侧工作区。
+                可以先聊聊你的想法，也可以直接提出研究需求。确认研究目标后，研究进度和产物工作区会在这里展开。
               </p>
             </div>
           )}
@@ -856,7 +939,7 @@ export function Conversation({
                     ? '输入你的回答或修改意见；留空表示接受当前产物并继续。'
                     : project.state.project_goal
                       ? '提问、修改指定产物，或继续中断的任务…'
-                      : '描述你的研究问题、已有资料和预期成果…'
+                      : '聊聊你的想法，或提出一个问题…'
                 }
                 value={text}
                 onChange={(event) => setText(event.target.value)}
@@ -889,18 +972,6 @@ export function Conversation({
                     }
                     onChange={onModeChange}
                   />
-                  <Tooltip title="起始阶段、运行到哪一步、模型和运行参数">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<SettingOutlined />}
-                      disabled={running || !!checkpoint}
-                      onClick={onSettings}
-                      aria-label="运行设置"
-                    >
-                      <span className="composer-settings-label">运行设置</span>
-                    </Button>
-                  </Tooltip>
                 </div>
                 {running && (
                   <Tooltip title={project.status === 'stopping' ? '正在停止' : '停止运行'}>
@@ -910,8 +981,10 @@ export function Conversation({
                       shape="circle"
                       aria-label="停止运行"
                       icon={<span className="composer-stop-icon" aria-hidden="true" />}
-                      loading={project.status === 'stopping'}
-                      disabled={['external_running', 'stopping'].includes(project.status)}
+                      loading={stopping || project.status === 'stopping'}
+                      disabled={
+                        stopping || ['external_running', 'stopping'].includes(project.status)
+                      }
                       onClick={onStop}
                     />
                   </Tooltip>

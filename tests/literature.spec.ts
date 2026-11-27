@@ -319,15 +319,16 @@ test('legacy report shows missing trace and gap honestly', async ({ page }) => {
   await expect(page.locator('.markdown-reading')).toHaveCount(0);
 });
 
-test('goal and recorded actions remain visible before the report exists', async ({ page }) => {
+test('goal and forthcoming results remain visible before the report exists', async ({ page }) => {
   await page.route(/\/api\/projects\/[^/]+\/file\?/, (route) =>
     route.fulfill({ status: 404, json: { detail: '文件尚未生成' } }),
   );
   await open(page, 1512);
-  await expect(page.locator('.kind-goal')).toContainText('研究退役电池');
+  const waiting = page.getByRole('region', { name: '文献研究准备', exact: true });
+  await expect(waiting).toContainText('研究退役电池');
   await expect(page.getByText('报告暂不可用', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('报告尚未生成，检索进展将持续显示。')).toBeVisible();
-  await expect(page.locator('.kind-goal')).toBeVisible();
+  await expect(waiting).toContainText('有新的检索结果后自动更新');
+  await expect(waiting).toContainText('选用文献');
   await expect(page.locator('.markdown-reading')).toHaveCount(0);
 });
 

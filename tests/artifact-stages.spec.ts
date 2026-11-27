@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { artifactStage } from '../src/features/workbench/artifactStages';
 
-test('deliverables belong to research stages while sources and temporary files stay hidden', () => {
+test('paper sources remain available while temporary and implementation files stay hidden', () => {
   const expected = {
     'literature/RESEARCH_REPORT.md': 'literature',
     'data-search/DATA_REPORT.md': 'data_search',
@@ -14,12 +14,15 @@ test('deliverables belong to research stages while sources and temporary files s
     'figures/figure1.pdf': 'paper_figure',
     'paper/discussion.md': 'paper_write',
     'paper/main.pdf': 'paper_compile',
+    'paper/main.tex': 'paper_write',
+    'paper/sections/introduction.tex': 'paper_write',
+    'paper/references.bib': 'paper_write',
+    'paper/figures/architecture.png': 'paper_figure',
     'paper/review_round1.md': 'improvement',
   };
   for (const [path, stage] of Object.entries(expected))
     expect(artifactStage(path), path).toBe(stage);
   for (const path of [
-    'paper/main.tex',
     'scripts/train.py',
     'results/metrics.csv',
     'workflow-state.json',
@@ -43,6 +46,8 @@ test('stage selector lists only deliverables without nesting physical folders or
     'figures/figure1.png',
     'paper/main.pdf',
     'paper/main.tex',
+    'paper/sections/introduction.tex',
+    'paper/references.bib',
     'scripts/train.py',
     'experiments/template/README.md',
     'figures/previews/page.png',
@@ -71,11 +76,12 @@ test('stage selector lists only deliverables without nesting physical folders or
     '实验规划',
     '实验执行',
     '论文绘图',
+    '论文写作',
     '编译交付',
   ]);
-  await expect(popup.locator('.directory-file')).toHaveCount(6);
+  await expect(popup.locator('.directory-file')).toHaveCount(9);
   await expect(popup.locator('.directory-folder')).toHaveCount(0);
-  await expect(popup).not.toContainText('main.tex');
+  await expect(popup).toContainText('main.tex');
   await expect(popup).not.toContainText('train.py');
   await expect(popup).not.toContainText('README.md');
   await expect(page.getByRole('button', { name: '论文编辑器' })).toHaveCount(0);
@@ -85,4 +91,7 @@ test('stage selector lists only deliverables without nesting physical folders or
   await popup.locator('.directory-file').filter({ hasText: 'main.pdf' }).click();
   await expect(page.locator('.pdf-preview')).toBeVisible();
   await expect(page.locator('.monaco-editor')).toHaveCount(0);
+  await page.getByRole('button', { name: /^论文写作，/ }).click();
+  await expect(page.locator('.monaco-editor')).toBeVisible();
+  await expect(page.locator('.artifact-directory')).toContainText('main.tex');
 });

@@ -22,12 +22,16 @@ export function ChargeTransitionProvider({ children }: { children: ReactNode }) 
   const start = useCallback(
     async ({ to, from, tasks: work = [] }: ChargeOptions) => {
       if (busy.current) return;
+      busy.current = true;
       if (prefersReducedMotion()) {
-        await Promise.allSettled(work.map((task) => task.run()));
+        await Promise.race([
+          Promise.allSettled(work.map((task) => Promise.resolve().then(task.run))),
+          wait(MAX_WAIT_MS),
+        ]);
         navigate(to);
+        busy.current = false;
         return;
       }
-      busy.current = true;
       setOrigin(from || { x: innerWidth / 2, y: innerHeight / 2 });
       setPhase('charging');
       setTasks(work.map((task) => ({ label: task.label, done: false, failed: false })));

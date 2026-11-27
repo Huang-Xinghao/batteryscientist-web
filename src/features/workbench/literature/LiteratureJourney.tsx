@@ -146,6 +146,7 @@ function Markdown({ children }: { children: string }) {
 }
 export default function LiteratureJourney({
   content,
+  running = false,
   research,
   reportLoading,
   reportWaiting,
@@ -153,6 +154,7 @@ export default function LiteratureJourney({
   retryReport,
 }: {
   content: string;
+  running?: boolean;
   research?: ResearchContext;
   reportLoading: boolean;
   reportWaiting: boolean;
@@ -333,6 +335,40 @@ export default function LiteratureJourney({
   const paper = papers.find((entry) => entry.id === paperId);
   const gap = gaps.find((entry) => entry.id === selected);
   const action = searches.find((entry) => entry.id === selected);
+  if (!content.trim() && !searches.length && !reportError && !research?.error) {
+    return (
+      <section
+        className="literature-view research-journey literature-awaiting"
+        aria-label="文献研究准备"
+      >
+        <div className={`literature-generation ${running ? 'is-active' : ''}`} role="status">
+          <div className="literature-generation-orbit" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="literature-generation-label">文献研究</span>
+          <h2>{running ? '正在准备文献研究' : '文献研究待开始'}</h2>
+          <p>
+            {running
+              ? '研究目标已确认。检索记录、选用文献和研究脉络会陆续出现在这里。'
+              : '开始或继续研究后，检索记录和文献图谱会在这里逐步展开。'}
+          </p>
+          {research?.goal && <blockquote>{research.goal}</blockquote>}
+          <div className="literature-generation-outline" aria-hidden="true">
+            {['检索记录', '选用文献', '研究脉络'].map((label) => (
+              <div key={label}>
+                <span>{label}</span>
+                <i />
+                <i />
+              </div>
+            ))}
+          </div>
+          <small>有新的检索结果后自动更新</small>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="literature-view research-journey" aria-label="文献研究图谱">
       <div className="literature-toolbar">

@@ -369,7 +369,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Message History
+         * @description User messages come from durable runs, independently of actor/event pages.
+         */
+        get: operations["message_history_api_projects__project_id__messages_get"];
         put?: never;
         /** Send Message */
         post: operations["send_message_api_projects__project_id__messages_post"];
@@ -1028,6 +1032,13 @@ export interface components {
             /** Model */
             model?: string | null;
         };
+        /** MessageHistoryView */
+        MessageHistoryView: {
+            /** Messages */
+            messages: components["schemas"]["UserMessageView"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /** ModuleData */
         ModuleData: {
             /** Title */
@@ -1488,11 +1499,27 @@ export interface components {
              * @default false
              */
             full_stage?: boolean;
+            /**
+             * Required Tools
+             * @description 本次任务必须使用的阶段工具名，如bash、run_experiments；派单前检查，缺少时不启动任务。
+             */
+            required_tools?: string[];
         };
         /** StopAccepted */
         StopAccepted: {
             /** Status */
             status: string;
+        };
+        /** UserMessageView */
+        UserMessageView: {
+            /** Id */
+            id: string;
+            /** Created At */
+            created_at: string;
+            /** Content */
+            content: string;
+            /** Label */
+            label: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2131,6 +2158,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    message_history_api_projects__project_id__messages_get: {
+        parameters: {
+            query?: {
+                before?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageHistoryView"];
                 };
             };
             /** @description Validation Error */

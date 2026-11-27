@@ -159,37 +159,25 @@ test('current agent status follows work without a task history button', async ({
   await expect(page.getByText('实验角色正在规划对照组', { exact: true })).toBeVisible();
 });
 
-test('mode choice is shared by composer and run settings and submits the chosen mode', async ({
+test('composer switches collaboration mode and submits it without run settings', async ({
   page,
 }) => {
   await fixture(page, { running: false, mode: 'auto' });
   const composerMode = page.getByLabel('对话协作方式');
   await expect(composerMode).toBeVisible();
+  await expect(page.getByRole('button', { name: '运行设置', exact: true })).toHaveCount(0);
   await composerMode.getByText('专家模式', { exact: true }).click();
-  await page.getByRole('button', { name: '运行设置', exact: true }).click();
-  await expect(
-    page.getByText('专家模式 · 每个阶段审阅后继续（推荐）', { exact: true }),
-  ).toBeVisible();
-  await page.getByLabel('协作方式', { exact: true }).focus();
-  await page.getByLabel('协作方式', { exact: true }).press('ArrowDown');
-  await page.getByText('自动模式 · 连续运行整个工作流', { exact: true }).last().click();
-  await expect(page.getByText('自动模式会在任务范围内连续推进', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: /取\s*消/ }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(
-    composerMode.locator('.ant-segmented-item-selected').getByText('全自动', { exact: true }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: '运行设置', exact: true }).click();
-  await expect(page.getByText('自动模式会在任务范围内连续推进', { exact: false })).toBeVisible();
+  await expect(composerMode.locator('.ant-segmented-item-selected')).toContainText('专家模式');
+  await composerMode.getByText('全自动', { exact: true }).click();
   let body: Record<string, unknown> | undefined;
-  await page.route('**/api/projects/*/runs', (route) => {
+  await page.route('**/api/projects/*/messages', (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
     body = route.request().postDataJSON();
-    return route.fulfill({ status: 202, json: { id: 'mock-auto-run' } });
+    return route.fulfill({ status: 202, json: { accepted: true, id: 'mock-auto-run' } });
   });
-  await page.getByRole('button', { name: '启动研究', exact: true }).click();
+  await page.getByRole('textbox', { name: '研究指令', exact: true }).fill('继续研究');
+  await page.getByRole('button', { name: '发送研究指令', exact: true }).click();
   await expect.poll(() => body?.mode).toBe('auto');
-  expect(body?.action).toBe('resume');
-  expect(body?.max_tool_rounds).toBe(300);
 });
 
 test('live handoff returns focus to main without leaving the previous role working', async ({
@@ -329,7 +317,9 @@ test('Wiki progress streams public text and preserves the original user request'
   await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);
   await expect(page.getByText('旧请求残片', { exact: true })).toHaveCount(0);
   await expect(page.getByText('内部推理不展示', { exact: true })).toHaveCount(0);
-  await expect(page.locator('.user-message')).toHaveCount(0);
+  // User messages stay visible while a worker is streaming and after reload.
+  await expect(page.locator('.user-message')).toHaveCount(1);
+  await expect(page.locator('.user-message')).toContainText(original);
   finished = true;
   await page.reload();
   await expect(page.getByText('正在整理论文证据。', { exact: true })).toHaveCount(1);

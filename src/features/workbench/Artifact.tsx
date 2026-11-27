@@ -16,7 +16,9 @@ import { PaneDivider } from '../../shared/file-preview/PaneDivider';
 import { isImagePath } from '../../shared/file-preview/display';
 import { siblingImages } from '../../shared/file-preview/siblingImages';
 import { ProjectFileLink } from '../../shared/file-preview/ProjectFileLink';
+import { ProjectImage } from '../../shared/file-preview/ProjectImage';
 const ModelProposal = lazy(() => import('./ModelProposal'));
+const PdfReader = lazy(() => import('./PdfReader'));
 
 export function Artifact(
   props: Parameters<typeof FileArtifact>[0] & {
@@ -59,7 +61,7 @@ function FileArtifact({
   const client = useQueryClient();
   const isMarkdown = /\.md$/i.test(path);
   const isLiterature = path === 'literature/RESEARCH_REPORT.md';
-  const isTex = /\.tex$/i.test(path);
+  const isTex = /\.(tex|bib)$/i.test(path);
   const inlineEdit = isMarkdown || isTex;
   const images = siblingImages(path, files);
   const [imagePreview, setImagePreview] = useState(false);
@@ -101,6 +103,9 @@ function FileArtifact({
   const pdf = files.find((file) => file.path === selectedPdf);
   const source = files.find((file) => file.path === path);
   const stalePdf = savedSource || (pdf && source && source.modified > pdf.modified);
+  const mainSource =
+    files.find((file) => file.path === path.replace(/\.pdf$/i, '.tex'))?.path ||
+    files.find((file) => file.path === 'paper/main.tex')?.path;
 
   useEffect(() => {
     setMode(initialMode || (isTex ? '编辑' : '预览'));
@@ -214,6 +219,7 @@ function FileArtifact({
       >
         {isLiterature ? (
           <LiteratureJourney
+            running={running}
             content={file.data?.content || ''}
             research={research}
             reportLoading={file.isPending}
@@ -273,27 +279,33 @@ function FileArtifact({
               </section>
               <PaneDivider value={sourceWidth} onChange={setSourceWidth} />
               <section className="latex-pdf">
-                <div className="pane-heading">
-                  <span className="pdf-pane-label">PDF</span>
-                  {(dirty || stalePdf) && (
-                    <span className="pdf-stale-indicator" title="源码已修改，PDF 待重新编译">
-                      待编译
-                    </span>
-                  )}
-                  <Select
-                    aria-label="选择论文 PDF"
-                    placeholder="选择已有 PDF"
-                    value={selectedPdf || undefined}
-                    onChange={setPdfPath}
-                    options={pdfs.map((file) => ({ value: file.path, label: file.path }))}
-                  />
-                </div>
                 {selectedPdf ? (
-                  <iframe
-                    className="pdf-preview"
-                    title="论文 PDF 对照预览"
-                    src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}#toolbar=0&view=FitH`}
-                  />
+                  <Suspense fallback={<Spin className="editor-loading" />}>
+                    <PdfReader
+                      projectId={projectId}
+                      path={selectedPdf}
+                      modified={pdf?.modified}
+                      heading={
+                        <>
+                          {(dirty || stalePdf) && (
+                            <span
+                              className="pdf-stale-indicator"
+                              title="源码已修改，PDF 待重新编译"
+                            >
+                              待编译
+                            </span>
+                          )}
+                          <Select
+                            aria-label="选择论文 PDF"
+                            size="small"
+                            value={selectedPdf}
+                            onChange={setPdfPath}
+                            options={pdfs.map((file) => ({ value: file.path, label: file.path }))}
+                          />
+                        </>
+                      }
+                    />
+                  </Suspense>
                 ) : (
                   <Empty description="尚无已编译 PDF，完成编译交付后可在这里对照查看" />
                 )}
@@ -317,7 +329,14 @@ function FileArtifact({
           </Suspense>
         ) : file.data?.kind === 'binary' ? (
           path.endsWith('.pdf') ? (
-            <iframe className="pdf-preview" title={path} src={api.download(projectId, path)} />
+            <Suspense fallback={<Spin className="editor-loading" />}>
+              <PdfReader
+                projectId={projectId}
+                path={path}
+                modified={source?.modified}
+                onSource={mainSource && onOpen ? () => onOpen(mainSource) : undefined}
+              />
+            </Suspense>
           ) : isImagePath(path) ? (
             <div className="image-preview">
               <Image.PreviewGroup
@@ -372,14 +391,16 @@ function FileArtifact({
                     {children}
                   </ProjectFileLink>
                 ),
-                img: ({ alt, src }) => {
-                  const image = resolveImage(path, src, files);
-                  return image ? (
-                    <Image alt={alt || image} src={api.download(projectId, image)} />
-                  ) : (
-                    <span className="muted">[图片：{alt || '请在图片画廊中查看'}]</span>
-                  );
-                },
+                img: ({ alt, src, title }) => (
+                  <ProjectImage
+                    projectId={projectId}
+                    report={path}
+                    files={files}
+                    src={src}
+                    alt={alt}
+                    title={title}
+                  />
+                ),
               }}
             >
               {file.data?.content || ''}
@@ -393,15 +414,4 @@ function FileArtifact({
       </div>
     </div>
   );
-}
-
-function resolveImage(report: string, src: string | undefined, files: ProjectFile[]) {
-  if (!src || /^(?:[a-z]+:|\/\/)/i.test(src)) return undefined;
-  try {
-    const url = new URL(src, `https://project.invalid/${report}`);
-    const path = decodeURIComponent(url.pathname.slice(1));
-    return files.find((file) => file.path === path && isImagePath(path))?.path;
-  } catch {
-    return undefined;
-  }
 }

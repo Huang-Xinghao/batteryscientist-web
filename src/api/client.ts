@@ -83,6 +83,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  messages: (id: string, before?: string) =>
+    request<Schemas['MessageHistoryView']>(
+      `/projects/${id}/messages${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    ),
   answerQuestion: (id: string, question: UserQuestion, answer: string) =>
     request<Schemas['AnswerAccepted']>(`/projects/${id}/questions/${question.id}/answer`, {
       method: 'POST',

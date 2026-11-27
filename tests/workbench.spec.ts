@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+// Empty projects are fixtures; the public entry creates one from a research question.
+async function createEmptyProject(page: import('@playwright/test').Page, name: string) {
+  const response = await page.request.post('/api/projects', { data: { name } });
+  expect(response.ok()).toBe(true);
+  const project = await response.json();
+  await page.goto(`/projects/${project.id}`);
+}
+
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: 'wait' });
 });
@@ -7,6 +15,7 @@ test.afterEach(async ({ page }) => {
 async function mockCoordinatorReply(page: import('@playwright/test').Page) {
   let prompt = '';
   await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
     prompt = route.request().postDataJSON().prompt;
     await route.fulfill({ status: 202, json: { id: 'mock-coordinator-run' } });
   });
@@ -86,14 +95,10 @@ test('lists real projects, searches, and opens a research report', async ({ page
 });
 
 test('creates a project with a separate research directory', async ({ page }) => {
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('浏览器新建项目');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await createEmptyProject(page, '浏览器新建项目');
   await expect(page.getByRole('heading', { name: '浏览器新建项目' })).toBeVisible();
-  await page.getByRole('button', { name: '启动研究' }).click();
-  await expect(page.getByLabel('研究目标')).toBeVisible();
-  await page.getByRole('button', { name: /取\s*消/ }).click();
+  await expect(page.getByRole('textbox', { name: '研究指令', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '运行设置' })).toHaveCount(0);
 });
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
@@ -123,7 +128,7 @@ test('mobile workbench fits the viewport and file navigation works', async ({ pa
   await openFixture(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.getByRole('combobox', { name: '选择项目文件' }).fill('RESEARCH_REPORT.md');
-  await page.locator('.directory-file').filter({ hasText: 'RESEARCH_REPORT.md' }).click();
+  await page.getByRole('tree').getByTitle('literature/RESEARCH_REPORT.md', { exact: true }).click();
   await expect(page.getByLabel('文献研究图谱', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'artifacts/workbench-mobile-tested.png', fullPage: true });
 });
@@ -174,13 +179,11 @@ test('expert questions have a visible entry and collaboration mode can be chosen
   await openFixture(page);
   await expect(page.getByRole('button', { name: '查看问题并回答' })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /优先研究哪一个泛化问题/ })).toBeVisible();
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('模式选择测试');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
-  await page.getByRole('button', { name: '运行设置' }).click();
-  await expect(page.getByRole('combobox', { name: '协作方式', exact: true })).toBeVisible();
-  await expect(page.getByText('专家模式 · 每个阶段审阅后继续（推荐）')).toBeVisible();
+  await createEmptyProject(page, '模式选择测试');
+  const mode = page.getByRole('radiogroup', { name: '对话协作方式' });
+  await expect(mode.getByText('专家模式', { exact: true })).toBeVisible();
+  await mode.getByText('全自动', { exact: true }).click();
+  await expect(mode.locator('.ant-segmented-item-selected')).toContainText('全自动');
 });
 
 test('review questions have independent drafts and submit their matching answers together', async ({
@@ -253,7 +256,7 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   const surface = await page.locator('.latex-source .monaco-editor').boundingBox();
   expect(surface!.height).toBeGreaterThan(500);
   expect(surface!.width).toBeGreaterThan(350);
-  await expect(page.locator('iframe[title="论文 PDF 对照预览"]')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'PDF 阅读器', exact: true })).toBeVisible();
   const editor = page.locator('.monaco-editor').first();
   await expect(editor).toBeVisible();
   await editor.click();
@@ -268,7 +271,7 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   await page.getByRole('button', { name: '文件与产物', exact: true }).click();
   await page.getByRole('menuitem', { name: '图片画廊' }).click();
   await expect(page.locator('.workspace-panel-header')).toBeVisible();
-  await page.locator('.figure-gallery .ant-image').first().click();
+  await page.locator('.research-gallery .ant-image').first().click();
   await expect(page.locator('.ant-image-preview')).toBeVisible();
 });
 
@@ -320,6 +323,9 @@ for (const viewport of [
       });
     }
     await openFixture(page);
+    await page.locator('.artifact-directory .ant-select-selector').click();
+    await page.getByRole('combobox', { name: '选择项目文件' }).fill('data-search/DATA_REPORT.md');
+    await page.locator('.directory-file[title="data-search/DATA_REPORT.md"]').click();
     const toolbar = page.locator('.artifact-directory');
     const content = page.getByRole('region', { name: '文件内容' });
     await expect(content).toContainText('研究证据与实验结果。');
@@ -333,6 +339,7 @@ for (const viewport of [
       true,
     );
     await expect(page.getByRole('button', { name: '全屏查看' })).toHaveCount(0);
+    await page.locator('.artifact-directory .ant-select-selector').click();
     await page.getByRole('combobox', { name: '选择项目文件' }).fill('paper/main.tex');
     await page.locator('.directory-file').filter({ hasText: 'main.tex' }).click();
     const source = page.locator('.latex-source .monaco-editor');
@@ -349,13 +356,12 @@ for (const viewport of [
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     if (viewport.width < 700) {
       await page.locator('.latex-mobile-switch').getByText('PDF 预览', { exact: true }).click();
-      await expect(page.locator('.latex-pdf iframe')).toBeVisible();
-      expect((await page.locator('.latex-pdf iframe').boundingBox())!.height).toBeGreaterThan(50);
+      await expect(page.getByRole('region', { name: 'PDF 阅读器', exact: true })).toBeVisible();
+      expect(
+        (await page.getByRole('region', { name: 'PDF 阅读器', exact: true }).boundingBox())!.height,
+      ).toBeGreaterThan(50);
       await expect(source).toBeHidden();
     }
-    await page.getByRole('button', { name: /运行动态/ }).click();
-    await expect(page.getByRole('dialog', { name: '运行动态' })).toBeVisible();
-    await page.getByRole('button', { name: '关闭', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
@@ -460,14 +466,12 @@ test('mobile conversation sends checkpoint feedback and opens the artifact works
 });
 
 test('composer starts research and preserves its draft when submission fails', async ({ page }) => {
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('对话启动测试');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await createEmptyProject(page, '对话启动测试');
   await expect(page.getByRole('heading', { name: '对话启动测试' })).toBeVisible();
   let shouldFail = true;
   let body: Record<string, unknown> | undefined;
   await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
     body = route.request().postDataJSON();
     await route.fulfill({
       status: shouldFail ? 409 : 202,
@@ -491,12 +495,18 @@ test('composer starts research and preserves its draft when submission fails', a
 test('new project sends questions to the coordinator and replays saved chat on reload', async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await mockCoordinatorReply(page);
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('普通问答测试');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await createEmptyProject(page, '普通问答测试');
   await expect(page.getByRole('heading', { name: '普通问答测试' })).toBeVisible();
+  await expect(page.getByRole('region', { name: '产物工作区', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '展开研究进度' })).toHaveCount(0);
+  const chat = await page.getByRole('region', { name: '研究对话', exact: true }).boundingBox();
+  const layout = await page.locator('.research-layout').boundingBox();
+  expect(chat!.width).toBeGreaterThan(layout!.width * 0.95);
+  const composer = await page.locator('.chat-composer').boundingBox();
+  expect(Math.abs(composer!.x + composer!.width / 2 - (chat!.x + chat!.width / 2))).toBeLessThan(2);
+  await page.screenshot({ path: 'artifacts/discussion-desktop.png', fullPage: true });
   const url = page.url();
   const draft = page.getByRole('textbox', { name: '研究指令', exact: true });
   await draft.fill('你是谁？');
@@ -512,10 +522,50 @@ test('new project sends questions to the coordinator and replays saved chat on r
   expect(project.status).toBe('idle');
   await page.reload();
   await expect(page.locator('.user-message').filter({ hasText: '你是谁？' })).toBeVisible();
+  await expect(page.getByRole('region', { name: '产物工作区', exact: true })).toHaveCount(0);
   await expect(
     page.locator('.chat-markdown').filter({ hasText: '我是 BatteryScientist' }),
   ).toBeVisible();
   await page.unrouteAll({ behavior: 'wait' });
+});
+
+test('workspace opens only after the coordinator records a research goal', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let goal = '';
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...project,
+        state: { ...project.state, project_goal: goal },
+      },
+    });
+  });
+  await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
+    goal = '研究跨电芯寿命预测';
+    await route.fulfill({ status: 202, json: { id: 'goal-confirmed-run' } });
+  });
+  await createEmptyProject(page, '先讨论再研究');
+  await expect(page.getByRole('heading', { name: '先讨论再研究' })).toBeVisible();
+  await expect(page.getByRole('region', { name: '产物工作区', exact: true })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('navigation', { name: '工作台视图' })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: 'artifacts/discussion-mobile.png', fullPage: true });
+  await page
+    .getByRole('textbox', { name: '研究指令', exact: true })
+    .fill('确认，研究跨电芯寿命预测');
+  await page.getByRole('button', { name: '发送研究指令' }).click();
+  await expect(page.getByRole('button', { name: '展开研究进度' })).toBeVisible();
+  await page.getByRole('button', { name: '产物工作区', exact: true }).click();
+  await expect(page.getByRole('region', { name: '产物工作区', exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1512, height: 1080 });
+  await expect(page.getByRole('region', { name: '研究对话', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('region', { name: '产物工作区', exact: true })).toBeVisible();
 });
 
 test('paper divider resizes with the keyboard and resets on double click', async ({ page }) => {
@@ -559,10 +609,7 @@ test('single image opens the shared sibling preview', async ({ page }) => {
 test('message copy and reuse protect an existing composer draft', async ({ page, context }) => {
   await mockCoordinatorReply(page);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('消息操作测试');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await createEmptyProject(page, '消息操作测试');
   const draft = page.getByRole('textbox', { name: '研究指令', exact: true });
   await draft.fill('你是谁？');
   await page.getByRole('button', { name: '发送研究指令' }).click();
@@ -602,6 +649,7 @@ test('completed project messages use routing instead of resuming improvement', a
   });
   let body: Record<string, unknown> | undefined;
   await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
     body = route.request().postDataJSON();
     await route.fulfill({ status: 202, json: { id: 'scoped-figure-task' } });
   });
@@ -628,6 +676,7 @@ test('running project retains unaccepted messages without stopping the task', as
   });
   let prompt = '';
   await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
     prompt = route.request().postDataJSON().prompt;
     await route.fulfill({
       json: { intent: 'status', accepted: false, reply: '当前任务仍在执行，请稍后提交。' },
@@ -704,15 +753,26 @@ for (const width of [1512, 390]) {
         },
       }),
     );
+    await page.route('**/api/projects/*/proposal-overview', (route) =>
+      route.fulfill({
+        json: {
+          sha256: 'proposal-hash',
+          diagram: '',
+          input: '时序数据',
+          architecture: '比较时序模型',
+          output: '寿命预测',
+        },
+      }),
+    );
     await openFixture(page);
-    await page.getByRole('button', { name: '审阅方案', exact: true }).click();
-    await expect(
-      page.getByText('项目正在进行：实验执行。当前方案和已生成报告可继续查看。'),
-    ).toBeVisible();
+    if (width < 700) await page.getByRole('button', { name: '展开研究进度', exact: true }).click();
+    await page.getByRole('button', { name: /^研究精炼，/ }).click();
+    await expect(page.getByRole('heading', { name: '模型输入', exact: true })).toBeVisible();
     await expect(page.getByRole('region', { name: '方案任务进度' })).toHaveCount(0);
     await expect(page.getByRole('combobox', { name: '选择项目文件' })).toBeVisible();
     await page.getByRole('button', { name: /^文献研究，/ }).click();
-    await expect(page.locator('.artifact-filename')).toHaveText('文献研究图谱');
+    await expect(page.getByRole('region', { name: '文献研究图谱', exact: true })).toBeVisible();
+    await page.locator('.artifact-directory .ant-select-selector').click();
     await page.getByRole('combobox', { name: '选择项目文件' }).fill('DATA_REPORT.md');
     await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
     await expect(page.getByRole('region', { name: '文件内容' })).toBeVisible();
@@ -725,12 +785,10 @@ for (const width of [1512, 390]) {
 test('Enter sends, Shift+Enter inserts a newline, and IME confirmation does not send', async ({
   page,
 }) => {
-  await page.goto('/projects');
-  await page.getByRole('button', { name: '新建研究项目' }).click();
-  await page.getByLabel('项目名称').fill('回车发送测试');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await createEmptyProject(page, '回车发送测试');
   const sent: string[] = [];
   await page.route('**/api/projects/*/messages', async (route) => {
+    if (route.request().method() === 'GET') return route.fallback();
     sent.push(route.request().postDataJSON().prompt);
     await route.fulfill({ status: 202, json: { id: 'keyboard-run' } });
   });
@@ -762,4 +820,75 @@ test('Enter sends, Shift+Enter inserts a newline, and IME confirmation does not 
   await input.press('ControlOrMeta+Enter');
   await expect(input).toHaveValue('');
   expect(sent).toEqual(['第一行\na', '兼容原快捷键']);
+});
+
+for (const width of [1512, 390]) {
+  test(`pending literature shows an honest animated preview and switches to results at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    let ready = false;
+    await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+      const response = await route.fetch();
+      const project = await response.json();
+      project.status = 'running';
+      project.state = {
+        ...project.state,
+        status: 'running',
+        current_node: 'literature',
+        expert_checkpoint: null,
+      };
+      await route.fulfill({ response, json: project });
+    });
+    await page.route('**/api/projects/*/file?*', (route) =>
+      ready
+        ? route.continue()
+        : route.fulfill({ status: 404, json: { detail: 'not yet generated' } }),
+    );
+    await page.route('**/api/projects/*/activity?*', (route) =>
+      route.fulfill({ json: { events: [], has_more: false } }),
+    );
+    await openFixture(page);
+    const waiting = page.getByRole('region', { name: '文献研究准备', exact: true });
+    await expect(waiting).toContainText('正在准备文献研究');
+    await expect(waiting).toContainText('有新的检索结果后自动更新');
+    await expect(waiting.locator('.literature-generation-outline > div')).toHaveCount(3);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: `artifacts/literature-awaiting-${width}.png` });
+    ready = true;
+    await page.reload();
+    if (width < 700) await page.getByRole('button', { name: '产物工作区', exact: true }).click();
+    await expect(page.getByRole('region', { name: '文献研究图谱', exact: true })).toBeVisible();
+    await expect(waiting).toHaveCount(0);
+  });
+}
+
+test('stop requests cancellation immediately without a confirmation dialog', async ({ page }) => {
+  await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+    const response = await route.fetch();
+    const project = await response.json();
+    project.status = 'running';
+    project.state = { ...project.state, status: 'running', expert_checkpoint: null };
+    await route.fulfill({ response, json: project });
+  });
+  let requests = 0;
+  let release: () => void = () => {};
+  const responseReady = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/projects/*/stop', async (route) => {
+    requests += 1;
+    await responseReady;
+    await route.fulfill({ json: { status: 'stopping' } });
+  });
+  await openFixture(page);
+  const stop = page.getByRole('button', { name: '停止运行', exact: true });
+  await stop.click();
+  await expect.poll(() => requests).toBe(1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(stop).toBeDisabled();
+  release();
+  await expect(page.getByText('已请求停止，正在保存执行状态')).toBeVisible();
 });

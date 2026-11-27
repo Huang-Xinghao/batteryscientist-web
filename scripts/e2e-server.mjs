@@ -85,7 +85,45 @@ await writeFile(
   join(project, 'paper', 'main.tex'),
   '\\documentclass{article}\n\\begin{document}\nResearch paper\n\\end{document}\n',
 );
-await writeFile(join(project, 'paper', 'main.pdf'), '%PDF-1.4\n%%EOF\n');
+// A real, two-page document exercises PDF rendering and navigation in the browser.
+function fixturePdf() {
+  const streams = ['Battery lifetime research', 'Results and reproducibility'].map(
+    (text) => `BT /F1 22 Tf 60 740 Td (${text}) Tj ET`,
+  );
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R >> >> /Contents 4 0 R >>',
+    `<< /Length ${streams[0].length} >>\nstream\n${streams[0]}\nendstream`,
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>',
+    `<< /Length ${streams[1].length} >>\nstream\n${streams[1]}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return pdf;
+}
+await writeFile(join(project, 'paper', 'main.pdf'), fixturePdf());
+await mkdir(join(project, 'paper', 'sections'), { recursive: true });
+await writeFile(
+  join(project, 'paper', 'sections', 'introduction.tex'),
+  '\\section{Introduction}\nBattery research.\n',
+);
+await writeFile(
+  join(project, 'paper', 'references.bib'),
+  '@article{battery2026, title={Battery research}, year={2026}}\n',
+);
 await writeFile(
   join(project, 'figures', 'test.png'),
   Buffer.from(

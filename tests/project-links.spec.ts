@@ -66,7 +66,7 @@ test('chat and report links preview project files in the workspace without openi
     if (path.endsWith('.png')) {
       await expect(page.getByRole('img', { name: path, exact: true })).toBeVisible();
     } else {
-      await expect(page.locator(`iframe[title="${path}"]`)).toBeVisible();
+      await expect(page.getByRole('region', { name: 'PDF 阅读器', exact: true })).toBeVisible();
     }
     expect(page.context().pages()).toHaveLength(pageCount);
     expect(page.url()).toBe(projectUrl);
@@ -85,7 +85,8 @@ test('chat and report links preview project files in the workspace without openi
         path,
         editable: true,
         sha256: 'fixture',
-        content: '# 数据报告\n\n[报告内图片](../figures/test.png)',
+        content:
+          '# 数据报告\n\n[报告内图片](../figures/test.png)\n\n![报告配图](../figures/test.png)',
       },
     });
   });
@@ -93,6 +94,10 @@ test('chat and report links preview project files in the workspace without openi
   await page.locator('.directory-file').filter({ hasText: 'DATA_REPORT.md' }).click();
   const reportLink = page.getByRole('link', { name: '报告内图片' });
   await expect(reportLink).toBeVisible();
+  const reportImage = page.getByRole('img', { name: '报告配图', exact: true });
+  await expect
+    .poll(() => reportImage.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
   expect(
     new URL((await reportLink.getAttribute('href'))!, page.url()).searchParams.get('path'),
   ).toBe('figures/test.png');
